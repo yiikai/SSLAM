@@ -34,6 +34,7 @@ namespace MySlam
 				m_currentFrame->setPose(m_relative_motion * m_lastFrame->getPose());
 			}
 			trackingLastFrame();
+			EstimateCurrentPose();
 		}
 		else
 		{
@@ -59,6 +60,7 @@ namespace MySlam
 		Eigen::Matrix<double, 3, 3> K = m_sets.mv_cameras[0].getK();
 
 		//define edges
+		std::vector<edgeProjectionPoseOnly*> edges;
 		int index = 1;
 		for(int i =0; i < m_currentFrame->m_leftKPs.size(); i++)
 		{
@@ -70,9 +72,25 @@ namespace MySlam
 				edge->setId(index);
 				edge->setVertex(0, vertex_pose);
 				edge->setMeasurement(toVec2(m_currentFrame->m_leftKPs[i]->getPts()));
+				edge->setInformation(Eigen::Matrix2d::Identity());
+				edge->setRobustKernel(new g2o::RobustKernelHuber);
+				optimizer.addEdge(edge);
+				edges.push_back(edge);
+				index++;
 			}
 		}
-
+		const double chi2_th = 5.991;
+		for(int iteration = 0; iteration < 4; iteration++)
+		{
+			vertex_pose->setEstimate(m_currentFrame->getPose());
+			optimizer.initializeOptimization();
+			optimizer.optimize(10);
+			for(int i = 0; i < edges.size(); i++)
+			{
+				auto e = edges[i];
+				cout<<"egde score for probility "<<e->chi2()<<endl;
+			}
+		}
 	}
 
  
@@ -140,8 +158,8 @@ namespace MySlam
 		Sophus::SE3d l_poseL, l_poseR;
 		l_poseL = m_sets.mv_cameras[0].m_pose;
 		l_poseR = m_sets.mv_cameras[1].m_pose;
-		cv::Mat l_cv_camLpos;
-		cv::Mat l_cv_camRpos;
+		cv::Mat l_cv_camLpos = cv::Mat(3,4,CV_64FC4);
+		cv::Mat l_cv_camRpos = cv::Mat(3,4,CV_64FC4);
 		cv::eigen2cv(l_poseL.matrix3x4(),l_cv_camLpos);
 		cv::eigen2cv(l_poseR.matrix3x4(),l_cv_camRpos);
 		
@@ -157,13 +175,15 @@ namespace MySlam
 		
 			cv::Mat mp; //point4D
 			cv::triangulatePoints(l_cv_camLpos,l_cv_camRpos,l_lkps,l_rkps,mp);
-			homogeneous2normalcoordinate(mp);
+			//homogeneous2normalcoordinate(mp);
 			cv::Mat mp3D = mp.rowRange(0,3);
-			//PrintMat(mp);
-			mappoint::ptr newMapPoint = make_shared<mappoint>(mp3D);
-			m_currentFrame->m_leftKPs[i]->setMapPoint(newMapPoint);
-			m_currentFrame->m_rightKPs[i]->setMapPoint(newMapPoint);
-			m_map.insertPoints(newMapPoint);
+			if(mp3D.at<float>(0,2) > 0)
+			{
+				mappoint::ptr newMapPoint = make_shared<mappoint>(mp3D);
+				m_currentFrame->m_leftKPs[i]->setMapPoint(newMapPoint);
+				m_currentFrame->m_rightKPs[i]->setMapPoint(newMapPoint);
+				m_map.insertPoints(newMapPoint);
+			}
 		}
 		m_status = E_STATUS::E_TRACKING;
 	}
