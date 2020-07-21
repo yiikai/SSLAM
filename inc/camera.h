@@ -40,7 +40,7 @@ namespace MySlam
 			Eigen::Matrix<double, 3, 1> world2camera(const Eigen::Matrix<double, 3, 1>&w_point, const Sophus::SE3d& T_C_W);
 			Eigen::Matrix<double, 2,1> camera2pixel(const Eigen::Matrix<double,3,1>& p_c);	
 			Eigen::Matrix<double, 2, 1>  world2pixel(const Eigen::Matrix<double,3,1>& p_w, const Sophus::SE3d& T_c_w);
-			Eigen::Matrix<double,3,1> pixel2camera(const Eigen::Matrix<double,2,1>& p_p, double depth);
+			cv::Point2f pixel2camera(const cv::Point2f& p_p, double depth = 1);
 			string name;
 			double m_fx = 0;
 			double m_fy = 0;

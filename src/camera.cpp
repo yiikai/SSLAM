@@ -21,12 +21,11 @@ namespace MySlam
 	}
 
 	
-	Eigen::Matrix<double,3,1> Camera::pixel2camera(const Eigen::Matrix<double,2,1>& p_p, double depth)
+	cv::Point2f Camera::pixel2camera(const cv::Point2f& p_p, double depth)
 	{
-		return Eigen::Matrix<double,3,1>(
-				(p_p(0,0) - m_cx) * depth / m_fx,
-				(p_p(1,0) - m_cy) * depth / m_fy,
-				depth
+		return cv::Point2f(
+				(p_p.x - m_cx) * depth / m_fx,
+				(p_p.y - m_cy) * depth / m_fy
 				); 
 	}
 }

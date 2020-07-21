@@ -167,15 +167,22 @@ namespace MySlam
 		{
 			if(m_currentFrame->m_rightKPs[i] == nullptr)
 				continue;
-			auto l_rpts = m_currentFrame->m_rightKPs[i]->getPts();
-			auto l_lpts = m_currentFrame->m_leftKPs[i]->getPts();
+			/* pixel point in camera coordinate */
+			cv::Point2f rcpts;  
+			cv::Point2f lcpts;
+			/*=================================*/
+			
+			lcpts = m_sets.mv_cameras[0].pixel2camera(m_currentFrame->m_leftKPs[i]->getPts());
+			rcpts = m_sets.mv_cameras[0].pixel2camera(m_currentFrame->m_rightKPs[i]->getPts());
 			std::vector<cv::Point2f> l_lkps, l_rkps;
-			l_lkps.push_back(l_lpts);
-			l_rkps.push_back(l_rpts);	
+			l_lkps.push_back(lcpts);
+			l_rkps.push_back(rcpts);	
 		
 			cv::Mat mp; //point4D
 			cv::triangulatePoints(l_cv_camLpos,l_cv_camRpos,l_lkps,l_rkps,mp);
-			//homogeneous2normalcoordinate(mp);
+			//cout<<mp<<endl;
+			homogeneous2normalcoordinate(mp);
+			//cout<<mp<<endl;
 			cv::Mat mp3D = mp.rowRange(0,3);
 			if(mp3D.at<float>(0,2) > 0)
 			{
