@@ -37,13 +37,18 @@ namespace MySlam
 			{
 				return m_pose;
 			}
-	
+			
+			void setKeyFrame()
+			{
+				m_keyFrame = true;
+			}	
 			cv::Mat m_leftImg;
 			std::vector<feature::ptr> m_leftKPs;
 			cv::Mat m_rightImg; 	
 			std::vector<feature::ptr> m_rightKPs;
 		private:
 			Sophus::SE3d m_pose;
+			bool m_keyFrame = {false};
 	};
 }
 #endif

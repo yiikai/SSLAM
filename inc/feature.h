@@ -23,6 +23,7 @@ class feature
 		
 		
 		std::weak_ptr<mappoint> m_mapPt; //pixel in world corrdinate
+		bool m_inlier = {true};
 	private:
 		cv::Point2f m_pt; //pixel points 2D
 };

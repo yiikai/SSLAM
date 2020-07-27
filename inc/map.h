@@ -18,6 +18,7 @@ class map
 		}
 	private:
 		vector<mappoint::ptr> m_3dpoints;
+		vector<frame::ptr> m_activeFrames;
 };
 
 }

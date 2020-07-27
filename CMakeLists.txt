@@ -20,7 +20,6 @@ include_directories(./inc)
 include_directories (${OpenCV_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR} ${EIGEN3_INCLUDE_DIR} ${CSPARSE_INCLUDE_DIR})
 include_directories ("../VisualSlam/ThirdParty/Sophus-master/")
-
 add_executable(steroslam SteroSlam.cpp ${DIR_SRCS})
 
-target_link_libraries(steroslam ${OpenCV_LIBS} ${G2O_LIBS})
+target_link_libraries(steroslam ${OpenCV_LIBRARIES} ${G2O_LIBS} )

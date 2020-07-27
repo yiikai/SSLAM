@@ -34,7 +34,17 @@ namespace MySlam
 				m_currentFrame->setPose(m_relative_motion * m_lastFrame->getPose());
 			}
 			trackingLastFrame();
-			EstimateCurrentPose();
+			m_tracking_inlier = EstimateCurrentPose();
+			if(m_tracking_inlier > m_num_feature_tracking)
+			{
+				m_status = E_TRACKING;
+			}
+			else
+			{
+				m_status = E_RESET;
+			}
+			insertKeyFrome();
+			m_relative_motion = m_currentFrame->getPose() * m_lastFrame->getPose().inverse();
 		}
 		else
 		{
@@ -42,7 +52,17 @@ namespace MySlam
 		}
 	}
 	
-	void frontEnd::EstimateCurrentPose()
+	void frontEnd::insertKeyFrome()
+	{
+		if( m_tracking_inlier > m_num_feature_need_for_keyframe)
+			return ;
+		m_currentFrame->setKeyFrame();
+		detectedFeature();
+		findFeatureInRight();		
+
+	}
+	
+	int frontEnd::EstimateCurrentPose()
 	{
 		using BlockSolverType = g2o::BlockSolver_6_3;
 		using LinearSolverType = g2o::LinearSolverDense<BlockSolverType::PoseMatrixType>;
@@ -60,6 +80,7 @@ namespace MySlam
 		Eigen::Matrix<double, 3, 3> K = m_sets.mv_cameras[0].getK();
 
 		//define edges
+		std::vector<feature::ptr> features;
 		std::vector<edgeProjectionPoseOnly*> edges;
 		int index = 1;
 		for(int i =0; i < m_currentFrame->m_leftKPs.size(); i++)
@@ -72,6 +93,7 @@ namespace MySlam
 				edge->setId(index);
 				edge->setVertex(0, vertex_pose);
 				edge->setMeasurement(toVec2(m_currentFrame->m_leftKPs[i]->getPts()));
+				features.push_back(m_currentFrame->m_leftKPs[i]);
 				edge->setInformation(Eigen::Matrix2d::Identity());
 				edge->setRobustKernel(new g2o::RobustKernelHuber);
 				optimizer.addEdge(edge);
@@ -79,18 +101,44 @@ namespace MySlam
 				index++;
 			}
 		}
+
+		int tracking_inliers = 0;
 		const double chi2_th = 5.991;
 		for(int iteration = 0; iteration < 4; iteration++)
 		{
 			vertex_pose->setEstimate(m_currentFrame->getPose());
 			optimizer.initializeOptimization();
-			optimizer.optimize(10);
+			optimizer.optimize(20);
 			for(int i = 0; i < edges.size(); i++)
 			{
 				auto e = edges[i];
-				cout<<"egde score for probility "<<e->chi2()<<endl;
+				e->computeError();
+				if(e->chi2() < chi2_th)
+				{
+					//this is a good edge
+					e->setLevel(1);
+					features[i]->m_inlier = true;
+					tracking_inliers++;	
+				}
+				else
+				{
+					//this is not a good edge , mappopint must out of this frame.
+					features[i]->m_inlier = false;
+					e->setLevel(0); // Need optimize this edge anymore.
+				}
 			}
 		}
+		m_currentFrame->setPose(vertex_pose->estimate());
+		//cout<<"Frame estimate pose: "<< m_currentFrame->getPose().matrix3x4()<<endl;
+		for(auto& m:features)
+		{
+			if( !(m->m_inlier) )
+			{				
+				m->m_mapPt.reset();
+				m->m_inlier = true;			
+			}
+		}
+		return tracking_inliers;	
 	}
 
  
@@ -213,13 +261,11 @@ namespace MySlam
 
 	void frontEnd::findFeatureInRight()
 	{
-		int num_good_pts = 0;
-		if(m_status == E_STATUS::E_INITING)
-		{
+			int num_good_pts = 0;
 			std::vector<cv::Point2f> lv_rightKps,lv_leftKps;
 			for(auto& k:m_currentFrame->m_leftKPs)
 			{
-				lv_leftKps.push_back(k->getPts());	
+					lv_leftKps.push_back(k->getPts());	
 			}
 			lv_rightKps = lv_leftKps;
 			std::vector<uchar> status;
@@ -227,22 +273,21 @@ namespace MySlam
 			cv::calcOpticalFlowPyrLK(m_currentFrame->m_leftImg, m_currentFrame->m_rightImg, lv_leftKps, lv_rightKps, status, error);
 			for(int i = 0;  i < status.size(); i++)
 			{
-				if(status[i])
-				{
-					feature::ptr l_rf = make_shared<feature>(lv_rightKps[i]);		
-					m_currentFrame->m_rightKPs.push_back(l_rf);
-					num_good_pts++;
-				}
-				else
-				{
-					m_currentFrame->m_rightKPs.push_back(nullptr);
-				}
+					if(status[i])
+					{
+							feature::ptr l_rf = make_shared<feature>(lv_rightKps[i]);		
+							m_currentFrame->m_rightKPs.push_back(l_rf);
+							num_good_pts++;
+					}
+					else
+					{
+							m_currentFrame->m_rightKPs.push_back(nullptr);
+					}
 			}		
-		}
-		cout<<"match right key point: "<<num_good_pts<<endl;
-		cout<<"frame leftKP: "<<m_currentFrame->m_leftKPs.size()<<endl;
-		cout<<"frame rightKP: "<<m_currentFrame->m_rightKPs.size()<<endl;
-		
+			cout<<"match right key point: "<<num_good_pts<<endl;
+			cout<<"frame leftKP: "<<m_currentFrame->m_leftKPs.size()<<endl;
+			cout<<"frame rightKP: "<<m_currentFrame->m_rightKPs.size()<<endl;
+
 	}
 }
 

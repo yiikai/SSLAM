@@ -11,6 +11,7 @@
 #include "map.h"
 namespace MySlam
 {
+
 	class frontEnd
 	{
 		public:
@@ -28,11 +29,12 @@ namespace MySlam
 			void detectedFeature();
 			void findFeatureInRight(); //find match point in right camera img.
 			void calcMapPoint();
-			void EstimateCurrentPose();		
+			int EstimateCurrentPose();		
 			void trackingLastFrame();
 			Eigen::Matrix<double,2,1> toVec2(const cv::Point2f& val){
 	return Eigen::Matrix<double,2,1>(val.x, val.y);
 }
+			void insertKeyFrome();
 		private:
 			frame::ptr m_currentFrame;
 			frame::ptr m_lastFrame;
@@ -43,6 +45,9 @@ namespace MySlam
 			std::vector<cv::Point2f> m_matchR; 
 			Sophus::SE3d m_relative_motion;   //假设的当前frame相对于上一个frame的位姿
 			map m_map;  //slam的最终地图数据
+			int m_tracking_inlier = {0};
+			int m_num_feature_tracking = {20};
+			int m_num_feature_need_for_keyframe = {80};
 	};
 }
 #endif
