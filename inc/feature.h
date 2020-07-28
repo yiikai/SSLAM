@@ -2,10 +2,11 @@
 #define FEATURE_H
 #include <memory>
 #include <opencv2/opencv.hpp>
-#include "mappoint.h"
+
 using namespace std;
 namespace MySlam
 {
+class mappoint;
 class feature
 {
 	public:
@@ -16,12 +17,7 @@ class feature
 		{
 			return m_pt;
 		}
-		void setMapPoint(mappoint::ptr mp)
-		{
-			m_mapPt = mp;
-		}
-		
-		
+
 		std::weak_ptr<mappoint> m_mapPt; //pixel in world corrdinate
 		bool m_inlier = {true};
 	private:

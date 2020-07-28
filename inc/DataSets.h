@@ -18,7 +18,6 @@ namespace MySlam
 			~DataSets();
 			bool init();
 			frame::ptr nextFrame();				
-	
 			string 	ms_DataPath;
 			std::vector<Camera> mv_cameras;  //left and right
 			int     m_imgcount = {0};

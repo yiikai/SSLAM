@@ -2,6 +2,7 @@
 #define MAP_H
 #include <vector>
 #include "mappoint.h"
+#include "frame.h"
 using namespace std;
 namespace MySlam
 {

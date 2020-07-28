@@ -235,8 +235,8 @@ namespace MySlam
 			if(mp3D.at<float>(0,2) > 0)
 			{
 				mappoint::ptr newMapPoint = make_shared<mappoint>(mp3D);
-				m_currentFrame->m_leftKPs[i]->setMapPoint(newMapPoint);
-				m_currentFrame->m_rightKPs[i]->setMapPoint(newMapPoint);
+				m_currentFrame->m_leftKPs[i]->m_mapPt = newMapPoint;
+				m_currentFrame->m_rightKPs[i]->m_mapPt = newMapPoint;
 				m_map.insertPoints(newMapPoint);
 			}
 		}
@@ -265,9 +265,24 @@ namespace MySlam
 			std::vector<cv::Point2f> lv_rightKps,lv_leftKps;
 			for(auto& k:m_currentFrame->m_leftKPs)
 			{
-					lv_leftKps.push_back(k->getPts());	
+				lv_leftKps.push_back(k->getPts());	
+				auto mp = k->m_mapPt.lock();
+				if(mp)
+				{
+					Eigen::Matrix<double,3,1> mpEigen;
+					cv::cv2eigen(mp->getPose(),mpEigen);
+					Eigen::Matrix<double,2,1> pt = m_sets.mv_cameras[1].world2pixel(mpEigen,m_currentFrame->getPose());
+					cv::Point2f p2f;
+					p2f.x = pt(0,0);
+					p2f.y = pt(1,0);
+					lv_rightKps.push_back(p2f);
+				}
+				else
+				{
+					lv_rightKps.push_back(k->getPts());
+				}
 			}
-			lv_rightKps = lv_leftKps;
+			
 			std::vector<uchar> status;
 			cv::Mat error;
 			cv::calcOpticalFlowPyrLK(m_currentFrame->m_leftImg, m_currentFrame->m_rightImg, lv_leftKps, lv_rightKps, status, error);
@@ -287,7 +302,6 @@ namespace MySlam
 			cout<<"match right key point: "<<num_good_pts<<endl;
 			cout<<"frame leftKP: "<<m_currentFrame->m_leftKPs.size()<<endl;
 			cout<<"frame rightKP: "<<m_currentFrame->m_rightKPs.size()<<endl;
-
 	}
 }
 

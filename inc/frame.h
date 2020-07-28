@@ -41,7 +41,8 @@ namespace MySlam
 			void setKeyFrame()
 			{
 				m_keyFrame = true;
-			}	
+			}
+	
 			cv::Mat m_leftImg;
 			std::vector<feature::ptr> m_leftKPs;
 			cv::Mat m_rightImg; 	
