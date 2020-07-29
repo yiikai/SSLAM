@@ -221,7 +221,7 @@ namespace MySlam
 			/*=================================*/
 			
 			lcpts = m_sets.mv_cameras[0].pixel2camera(m_currentFrame->m_leftKPs[i]->getPts());
-			rcpts = m_sets.mv_cameras[0].pixel2camera(m_currentFrame->m_rightKPs[i]->getPts());
+			rcpts = m_sets.mv_cameras[1].pixel2camera(m_currentFrame->m_rightKPs[i]->getPts());
 			std::vector<cv::Point2f> l_lkps, l_rkps;
 			l_lkps.push_back(lcpts);
 			l_rkps.push_back(rcpts);	
@@ -237,9 +237,12 @@ namespace MySlam
 				mappoint::ptr newMapPoint = make_shared<mappoint>(mp3D);
 				m_currentFrame->m_leftKPs[i]->m_mapPt = newMapPoint;
 				m_currentFrame->m_rightKPs[i]->m_mapPt = newMapPoint;
+				newMapPoint->addObservation(m_currentFrame->m_leftKPs[i]);
+				newMapPoint->addObservation(m_currentFrame->m_rightKPs[i]);	
 				m_map.insertPoints(newMapPoint);
 			}
 		}
+		m_currentFrame->setKeyFrame();
 		m_status = E_STATUS::E_TRACKING;
 	}
 

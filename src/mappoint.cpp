@@ -16,5 +16,10 @@ namespace MySlam
 	{
 		return m_pose;
 	}
+
+	void mappoint::addObservation(feature::ptr feat)
+	{
+		m_observations.push_back(feat);
+	}
 }
 
