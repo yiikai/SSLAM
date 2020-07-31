@@ -10,6 +10,11 @@ namespace MySlam
 		
 	void map::insertPoints(mappoint::ptr point)
 	{
-		m_3dpoints.push_back(point);
+		m_activeMapPoints.push_back(point);
 	}
+	
+	void map::insertKeyFrame(frame::ptr frame)
+	{
+		m_activeFrames.push_back(frame);
+	} 
 }

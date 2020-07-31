@@ -30,6 +30,7 @@ namespace MySlam
 			void findFeatureInRight(); //find match point in right camera img.
 			void calcMapPoint();
 			int EstimateCurrentPose();		
+			void addObservationToMapPoint();
 			void trackingLastFrame();
 			Eigen::Matrix<double,2,1> toVec2(const cv::Point2f& val){
 	return Eigen::Matrix<double,2,1>(val.x, val.y);

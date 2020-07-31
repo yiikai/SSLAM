@@ -35,6 +35,7 @@ namespace MySlam
 			}
 			trackingLastFrame();
 			m_tracking_inlier = EstimateCurrentPose();
+			cout<<"current frame inlier: "<<m_tracking_inlier<<endl;
 			if(m_tracking_inlier > m_num_feature_tracking)
 			{
 				m_status = E_TRACKING;
@@ -42,25 +43,43 @@ namespace MySlam
 			else
 			{
 				m_status = E_RESET;
+				//当前观测到的三维目标点太少了，不够建图，这说明位姿可能有严重偏差，需要将当前帧设为keyframe用于后端优化
+				insertKeyFrome();				
 			}
-			insertKeyFrome();
 			m_relative_motion = m_currentFrame->getPose() * m_lastFrame->getPose().inverse();
 		}
-		else
+		
 		{
 			
 		}
 	}
-	
+
+	void frontEnd::addObservationToMapPoint()
+	{
+		for(auto& k:m_currentFrame->m_leftKPs)
+		{
+			auto mp = k->m_mapPt.lock();
+			if(mp)
+			{
+				mp->addObservation(k);		
+			}
+		}		
+	}
+
 	void frontEnd::insertKeyFrome()
 	{
 		if( m_tracking_inlier > m_num_feature_need_for_keyframe)
 			return ;
 		m_currentFrame->setKeyFrame();
+		//将当前观测到的mappoint和feature联系起来，因为上一帧不是重新detetcet特征的，而是根据前一帧算出来的，所以相关的mappoint和feature没有联系起来
+		addObservationToMapPoint();  //NOTE: 关联的原因是mappoint可能会被很多的frame看到，图有化的结构想一想就知道了	
+		m_map.insertKeyFrame(m_currentFrame);	
 		detectedFeature();
-		findFeatureInRight();		
-
+		findFeatureInRight();
+						
 	}
+
+		
 	
 	int frontEnd::EstimateCurrentPose()
 	{
@@ -106,6 +125,8 @@ namespace MySlam
 		const double chi2_th = 5.991;
 		for(int iteration = 0; iteration < 4; iteration++)
 		{
+			
+			tracking_inliers = 0;
 			vertex_pose->setEstimate(m_currentFrame->getPose());
 			optimizer.initializeOptimization();
 			optimizer.optimize(20);
@@ -200,7 +221,7 @@ namespace MySlam
 				A.at<float>(j,i) /= A.at<float>(3,i);
 		}
 	}
-	
+
 	void frontEnd::calcMapPoint()
 	{
 		Sophus::SE3d l_poseL, l_poseR;
@@ -213,36 +234,44 @@ namespace MySlam
 		
 		for(int i=0; i < m_currentFrame->m_leftKPs.size(); i++)
 		{
-			if(m_currentFrame->m_rightKPs[i] == nullptr)
-				continue;
-			/* pixel point in camera coordinate */
-			cv::Point2f rcpts;  
-			cv::Point2f lcpts;
-			/*=================================*/
-			
-			lcpts = m_sets.mv_cameras[0].pixel2camera(m_currentFrame->m_leftKPs[i]->getPts());
-			rcpts = m_sets.mv_cameras[1].pixel2camera(m_currentFrame->m_rightKPs[i]->getPts());
-			std::vector<cv::Point2f> l_lkps, l_rkps;
-			l_lkps.push_back(lcpts);
-			l_rkps.push_back(rcpts);	
-		
-			cv::Mat mp; //point4D
-			cv::triangulatePoints(l_cv_camLpos,l_cv_camRpos,l_lkps,l_rkps,mp);
-			//cout<<mp<<endl;
-			homogeneous2normalcoordinate(mp);
-			//cout<<mp<<endl;
-			cv::Mat mp3D = mp.rowRange(0,3);
-			if(mp3D.at<float>(0,2) > 0)
+
+			//首帧或位姿一旦不准，重新获取最新的三维目标点	
+			if(m_currentFrame->m_leftKPs[i]->m_mapPt.expired() &&
+				m_currentFrame->m_rightKPs[i] != nullptr)
 			{
-				mappoint::ptr newMapPoint = make_shared<mappoint>(mp3D);
-				m_currentFrame->m_leftKPs[i]->m_mapPt = newMapPoint;
-				m_currentFrame->m_rightKPs[i]->m_mapPt = newMapPoint;
-				newMapPoint->addObservation(m_currentFrame->m_leftKPs[i]);
-				newMapPoint->addObservation(m_currentFrame->m_rightKPs[i]);	
-				m_map.insertPoints(newMapPoint);
+				
+					if(m_currentFrame->m_rightKPs[i] == nullptr)
+							continue;
+					/* pixel point in camera coordinate */
+					cv::Point2f rcpts;  
+					cv::Point2f lcpts;
+					/*=================================*/
+
+					lcpts = m_sets.mv_cameras[0].pixel2camera(m_currentFrame->m_leftKPs[i]->getPts());
+					rcpts = m_sets.mv_cameras[1].pixel2camera(m_currentFrame->m_rightKPs[i]->getPts());
+					std::vector<cv::Point2f> l_lkps, l_rkps;
+					l_lkps.push_back(lcpts);
+					l_rkps.push_back(rcpts);	
+
+					cv::Mat mp; //point4D
+					cv::triangulatePoints(l_cv_camLpos,l_cv_camRpos,l_lkps,l_rkps,mp);
+					//cout<<mp<<endl;
+					homogeneous2normalcoordinate(mp);
+					//cout<<mp<<endl;
+					cv::Mat mp3D = mp.rowRange(0,3);
+					if(mp3D.at<float>(0,2) > 0)
+					{
+							mappoint::ptr newMapPoint = make_shared<mappoint>(mp3D);
+							m_currentFrame->m_leftKPs[i]->m_mapPt = newMapPoint;
+							m_currentFrame->m_rightKPs[i]->m_mapPt = newMapPoint;
+							newMapPoint->addObservation(m_currentFrame->m_leftKPs[i]);
+							newMapPoint->addObservation(m_currentFrame->m_rightKPs[i]);	
+							m_map.insertPoints(newMapPoint);
+					}
 			}
 		}
 		m_currentFrame->setKeyFrame();
+		m_map.insertKeyFrame(m_currentFrame);	
 		m_status = E_STATUS::E_TRACKING;
 	}
 
@@ -274,7 +303,7 @@ namespace MySlam
 				{
 					Eigen::Matrix<double,3,1> mpEigen;
 					cv::cv2eigen(mp->getPose(),mpEigen);
-					Eigen::Matrix<double,2,1> pt = m_sets.mv_cameras[1].world2pixel(mpEigen,m_currentFrame->getPose());
+					Eigen::Matrix<double,2,1> pt = m_sets.mv_cameras[1].world2pixel(mpEigen,m_currentFrame->getPose());  //右侧相机空间
 					cv::Point2f p2f;
 					p2f.x = pt(0,0);
 					p2f.y = pt(1,0);

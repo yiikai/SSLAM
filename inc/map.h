@@ -13,13 +13,11 @@ class map
 		map();
 		~map();
 		void insertPoints(mappoint::ptr point);
-		vector<mappoint::ptr>& getMapRef()
-		{
-			return m_3dpoints;
-		}
+		void insertKeyFrame(frame::ptr frame);
 	private:
-		vector<mappoint::ptr> m_3dpoints;
+		vector<mappoint::ptr> m_activeMapPoints;
 		vector<frame::ptr> m_activeFrames;
+		
 };
 
 }
