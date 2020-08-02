@@ -27,7 +27,7 @@ namespace MySlam
 			calcMapPoint();
 			m_lastFrame = m_currentFrame;	
 		}
-		else if(m_status == E_TRACKING)
+		if(m_status == E_TRACKING)
 		{
 			if(m_lastFrame)
 			{
@@ -42,16 +42,12 @@ namespace MySlam
 			}
 			else
 			{
-				m_status = E_RESET;
 				//当前观测到的三维目标点太少了，不够建图，这说明位姿可能有严重偏差，需要将当前帧设为keyframe用于后端优化
-				insertKeyFrome();				
+				insertKeyFrome();					
 			}
 			m_relative_motion = m_currentFrame->getPose() * m_lastFrame->getPose().inverse();
 		}
 		
-		{
-			
-		}
 	}
 
 	void frontEnd::addObservationToMapPoint()
@@ -76,7 +72,8 @@ namespace MySlam
 		m_map.insertKeyFrame(m_currentFrame);	
 		detectedFeature();
 		findFeatureInRight();
-						
+		calcMapPoint();
+		m_becken->wakeUpBeckenLoop();						
 	}
 
 		

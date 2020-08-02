@@ -9,6 +9,7 @@
 #include <Eigen/Geometry>
 #include <sophus/se3.hpp>
 #include "map.h"
+#include "becken.h"
 namespace MySlam
 {
 
@@ -18,6 +19,10 @@ namespace MySlam
 			frontEnd(DataSets& a_sets);
 			~frontEnd(){}
 			void addFrame(frame::ptr newframe);
+			void addBecken(becken::ptr becken)
+			{
+				m_becken = becken;
+			}	
 		private:
 			typedef enum
 			{
@@ -49,6 +54,7 @@ namespace MySlam
 			int m_tracking_inlier = {0};
 			int m_num_feature_tracking = {20};
 			int m_num_feature_need_for_keyframe = {80};
+			becken::ptr m_becken = {nullptr};
 	};
 }
 #endif

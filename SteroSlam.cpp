@@ -18,7 +18,9 @@ int main(int argc, char* * argv)
 	string path = "/home/yiikai/Develop/MySlam/resource/21";
 	DataSets sets(path);
 	sets.init();
+	becken::ptr l_becken = make_shared<becken>();
 	frontEnd l_front(sets);
+	l_front.addBecken(l_becken);
 	while(1)
 	{
 		l_front.addFrame(sets.nextFrame());
