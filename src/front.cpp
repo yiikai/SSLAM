@@ -18,7 +18,6 @@ namespace MySlam
 
 	void frontEnd::addFrame(frame::ptr newframe) 
 	{
-
 		m_currentFrame = newframe;
 		if(m_status == E_INITING)
 		{
@@ -43,7 +42,7 @@ namespace MySlam
 			else
 			{
 				//当前观测到的三维目标点太少了，不够建图，这说明位姿可能有严重偏差，需要将当前帧设为keyframe用于后端优化
-				insertKeyFrome();					
+				insertKeyFrame();					
 			}
 			m_relative_motion = m_currentFrame->getPose() * m_lastFrame->getPose().inverse();
 		}
@@ -62,7 +61,7 @@ namespace MySlam
 		}		
 	}
 
-	void frontEnd::insertKeyFrome()
+	void frontEnd::insertKeyFrame()
 	{
 		if( m_tracking_inlier > m_num_feature_need_for_keyframe)
 			return ;

@@ -40,7 +40,7 @@ namespace MySlam
 			Eigen::Matrix<double,2,1> toVec2(const cv::Point2f& val){
 	return Eigen::Matrix<double,2,1>(val.x, val.y);
 }
-			void insertKeyFrome();
+			void insertKeyFrame();
 		private:
 			frame::ptr m_currentFrame;
 			frame::ptr m_lastFrame;

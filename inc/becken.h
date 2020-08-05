@@ -18,7 +18,9 @@ public:
 	
 	/* becken optimizer */
 	void beckenLoop();
-	void wakeUpBeckenLoop();	
+	void wakeUpBeckenLoop();
+private:
+	void optimizer();	
 private:
 	thread* m_loop = {nullptr};
 	mutex m_beckenloopmutex;

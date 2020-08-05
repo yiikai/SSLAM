@@ -1,4 +1,5 @@
 #include "becken.h"
+#include <function>
 namespace MySlam
 {
 
@@ -31,7 +32,14 @@ namespace MySlam
 			std::unique_lock<std::mutex> lck(m_beckenloopmutex);
 			m_loopcv.wait(lck);
 			//TODO: becken Optimizer
+			
 		}	
+	}
+	
+	void becken::optimizer()
+	{
+		//do becken optimizer for key frame pose and mappoint
+		
 	}
 
 }
