@@ -10,10 +10,11 @@
 using namespace std;
 namespace MySlam
 {
-	frontEnd::frontEnd(DataSets& a_sets)
+	frontEnd::frontEnd(DataSets& a_sets, SLAMMap::ptr a_newmap)
 	{
 		mp_detector = cv::GFTTDetector::create();
 		m_sets = a_sets;
+		m_map = a_newmap;
 	}
 
 	void frontEnd::addFrame(frame::ptr newframe) 
@@ -68,7 +69,7 @@ namespace MySlam
 		m_currentFrame->setKeyFrame();
 		//将当前观测到的mappoint和feature联系起来，因为上一帧不是重新detetcet特征的，而是根据前一帧算出来的，所以相关的mappoint和feature没有联系起来
 		addObservationToMapPoint();  //NOTE: 关联的原因是mappoint可能会被很多的frame看到，图有化的结构想一想就知道了	
-		m_map.insertKeyFrame(m_currentFrame);	
+		m_map->insertKeyFrame(m_currentFrame);	
 		detectedFeature();
 		findFeatureInRight();
 		calcMapPoint();
@@ -262,12 +263,12 @@ namespace MySlam
 							m_currentFrame->m_rightKPs[i]->m_mapPt = newMapPoint;
 							newMapPoint->addObservation(m_currentFrame->m_leftKPs[i]);
 							newMapPoint->addObservation(m_currentFrame->m_rightKPs[i]);	
-							m_map.insertPoints(newMapPoint);
+							m_map->insertPoints(newMapPoint);
 					}
 			}
 		}
 		m_currentFrame->setKeyFrame();
-		m_map.insertKeyFrame(m_currentFrame);	
+		m_map->insertKeyFrame(m_currentFrame);	
 		m_status = E_STATUS::E_TRACKING;
 	}
 

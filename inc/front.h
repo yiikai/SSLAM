@@ -8,7 +8,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <sophus/se3.hpp>
-#include "map.h"
+#include "slammap.h"
 #include "becken.h"
 namespace MySlam
 {
@@ -16,12 +16,13 @@ namespace MySlam
 	class frontEnd
 	{
 		public:
-			frontEnd(DataSets& a_sets);
+			frontEnd(DataSets& a_sets, SLAMMap::ptr a_newmap);
 			~frontEnd(){}
 			void addFrame(frame::ptr newframe);
 			void addBecken(becken::ptr becken)
 			{
 				m_becken = becken;
+				m_becken->addMap(m_map);
 			}	
 		private:
 			typedef enum
@@ -50,7 +51,7 @@ namespace MySlam
 			std::vector<cv::Point2f> m_matchL;
 			std::vector<cv::Point2f> m_matchR; 
 			Sophus::SE3d m_relative_motion;   //假设的当前frame相对于上一个frame的位姿
-			map m_map;  //slam的最终地图数据
+			SLAMMap::ptr m_map;  //slam的最终地图数据
 			int m_tracking_inlier = {0};
 			int m_num_feature_tracking = {20};
 			int m_num_feature_need_for_keyframe = {80};

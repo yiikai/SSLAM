@@ -13,8 +13,8 @@ namespace MySlam
 	{
 		public:
 			typedef std::shared_ptr<frame> ptr; 
-			frame(){}
-			~frame(){}
+			frame();
+			~frame();
 
 			inline void showFrameWithKeyPoint(std::vector<cv::KeyPoint>& points)
 			{
@@ -41,15 +41,23 @@ namespace MySlam
 			void setKeyFrame()
 			{
 				m_keyFrame = true;
+				m_keyFrameID = m_totalKeyFrameCount++;	
+			}
+
+			long getKeyID()
+			{
+				return m_keyFrame;
 			}
 	
 			cv::Mat m_leftImg;
 			std::vector<feature::ptr> m_leftKPs;
 			cv::Mat m_rightImg; 	
 			std::vector<feature::ptr> m_rightKPs;
+			static long m_totalKeyFrameCount;
 		private:
 			Sophus::SE3d m_pose;
 			bool m_keyFrame = {false};
+			long m_keyFrameID = {0};
 	};
 }
 #endif

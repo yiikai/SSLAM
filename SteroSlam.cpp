@@ -10,7 +10,7 @@
 #include "sophus/se3.hpp"
 #include "inc/DataSets.h"
 #include "front.h"
-
+#include "slammap.h"
 using namespace MySlam;
 
 int main(int argc, char* * argv)
@@ -18,8 +18,9 @@ int main(int argc, char* * argv)
 	string path = "/home/yiikai/Develop/MySlam/resource/21";
 	DataSets sets(path);
 	sets.init();
-	becken::ptr l_becken = make_shared<becken>();
-	frontEnd l_front(sets);
+	SLAMMap::ptr lp_newmap = make_shared<SLAMMap>();
+	becken::ptr l_becken = make_shared<becken>(sets);
+	frontEnd l_front(sets, lp_newmap);
 	l_front.addBecken(l_becken);
 	while(1)
 	{
