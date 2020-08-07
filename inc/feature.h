@@ -6,6 +6,7 @@
 using namespace std;
 namespace MySlam
 {
+class frame;
 class mappoint;
 class feature
 {
@@ -17,9 +18,10 @@ class feature
 		{
 			return m_pt;
 		}
-
+		std::weak_ptr<frame> m_frame;
 		std::weak_ptr<mappoint> m_mapPt; //pixel in world corrdinate
 		bool m_inlier = {true};
+		bool m_isOnLeftImg = {false};
 	private:
 		cv::Point2f m_pt; //pixel points 2D
 };

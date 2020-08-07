@@ -190,6 +190,8 @@ namespace MySlam
 			if(status[i])
 			{
 				feature::ptr feat = make_shared<feature>(kps_current[i]);
+				feat->m_isOnLeftImg = true;
+				feat->m_frame = m_currentFrame;
 				feat->m_mapPt = m_lastFrame->m_leftKPs[i]->m_mapPt;
 				m_currentFrame->m_leftKPs.push_back(feat);
 				num_good_pts++;
@@ -282,6 +284,8 @@ namespace MySlam
 		for(auto& k:l_lkps)
 		{
 			feature::ptr feat = make_shared<feature>(k);
+			feat->m_frame = m_currentFrame;
+			feat->m_isOnLeftImg = true;
 			m_currentFrame->m_leftKPs.push_back(feat);	
 		}
 	//	m_currentFrame->showFrameWithKeyPoint(keypoints);
@@ -319,7 +323,9 @@ namespace MySlam
 			{
 					if(status[i])
 					{
-							feature::ptr l_rf = make_shared<feature>(lv_rightKps[i]);		
+							feature::ptr l_rf = make_shared<feature>(lv_rightKps[i]);
+							l_rf->m_frame = m_currentFrame;
+							l_rf->m_isOnLeftImg = false;	
 							m_currentFrame->m_rightKPs.push_back(l_rf);
 							num_good_pts++;
 					}

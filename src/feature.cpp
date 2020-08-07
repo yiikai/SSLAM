@@ -1,5 +1,6 @@
 #include "feature.h"
 #include "mappoint.h"
+#include "frame.h"
 namespace MySlam
 {
 

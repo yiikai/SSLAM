@@ -1,5 +1,6 @@
 #include "becken.h"
 #include "optimizerG2o.h"
+#include <map>
 namespace MySlam
 {
 
@@ -64,11 +65,37 @@ namespace MySlam
 		}
 		//添加路标点
 		Eigen::Matrix<double, 3, 3> K = m_sets.mv_cameras[0].getK();
+		SE3d left_ext = m_sets.mv_cameras[0].m_pose;
+		SE3d right_ext = m_sets.mv_cameras[1].m_pose;		
 		
-	
+		int index = 1;
+		double chi2_th = 5.991;
+		//记录需要优化的定点,如果记录过了就不需要再添加这个定点的边了
+		map<unsigned long, mappoint> verticesLandmarks; 	
 		for(auto& point:activeMapPoints)
 		{
-										
+			if(point->isOutLier())
+				continue;
+			//获取目标点的所有观察帧，遍历它们创建G2o的边和顶点
+			auto observations = point->getObservation();
+			for(auto& feat:observations)
+			{
+				auto frame = feat->m_frame.lock();
+				if(feat->m_inlier || !frame )
+					continue;
+				if(feat->m_isOnLeftImg)
+				{
+					edgeProjectionPoseAndXYZ *edge = new edgeProjectionPoseAndXYZ(K,left_ext);			
+				}
+				else
+				{
+					edgeProjectionPoseAndXYZ *edge = new edgeProjectionPoseAndXYZ(K,right_ext);			
+				}
+				if(verticesLandmarks.find(point->getID()) == verticesLandmarks.end())
+				{
+					//TODO: 添加新的顶点
+				}	
+			}			
 		}					
 	}
 

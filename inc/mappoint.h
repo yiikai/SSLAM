@@ -25,9 +25,18 @@ namespace MySlam
 				return pose;	
 			}
 			void addObservation(feature::ptr feat);
+			const list<feature::ptr>& getObservation()
+			{
+				return m_observations;
+			}
+			bool isOutLier();
+			unsigned long getID(){return m_id;}
 		private:
+			static long totoalID;
+			unsigned long m_id = {0};
 			cv::Mat m_pose;  //world corrdinate
-			list<feature::ptr> m_observations;	
+			list<feature::ptr> m_observations;
+			bool m_outlier = {false};
 	};
 }
 
