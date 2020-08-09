@@ -27,6 +27,7 @@ namespace MySlam
 			calcMapPoint();
 			m_lastFrame = m_currentFrame;	
 		}
+
 		if(m_status == E_TRACKING)
 		{
 			if(m_lastFrame)

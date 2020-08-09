@@ -2,6 +2,8 @@
 #define FEATURE_H
 #include <memory>
 #include <opencv2/opencv.hpp>
+#include <Eigen/Core>
+#include <Eigen/Geometry>
 
 using namespace std;
 namespace MySlam
@@ -18,6 +20,13 @@ class feature
 		{
 			return m_pt;
 		}
+
+		Eigen::Matrix<double,2,1> getEigenPts()
+		{
+			Eigen::Matrix<double,2,1> x(m_pt.x,m_pt.y);
+			return x;
+		}
+ 
 		std::weak_ptr<frame> m_frame;
 		std::weak_ptr<mappoint> m_mapPt; //pixel in world corrdinate
 		bool m_inlier = {true};

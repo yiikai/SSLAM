@@ -46,8 +46,9 @@ namespace MySlam
 	void becken::optimizer()
 	{
 		//do becken optimizer for key frame pose and mappoint
-		const vector<mappoint::ptr>& activeMapPoints = 	m_map->getActiveMapPoints();
-		const vector<frame::ptr>& activeFrames = m_map->getActiveFrames();
+		unsigned long max_kf_id = 0;
+		const map<unsigned long,mappoint::ptr>& activeMapPoints = 	m_map->getActiveMapPoints();
+		const map<unsigned long,frame::ptr>& activeFrames = m_map->getActiveFrames();
 		typedef g2o::BlockSolver_6_3 BlockSolverType;
 		typedef g2o::LinearSolverCSparse<BlockSolverType::PoseMatrixType> LinearSolverType;
 		auto solver = new g2o::OptimizationAlgorithmLevenberg(g2o::make_unique<BlockSolverType>(g2o::make_unique<LinearSolverType>()));
@@ -55,13 +56,17 @@ namespace MySlam
 		optimizer.setAlgorithm(solver);
 
 		//add vertex to graph
+		map<unsigned long, vertexPose*> vertices;
 		//添加位姿 	
-		for(auto& frame:activeFrames)
+		for(auto& l_frame:activeFrames)
 		{
 			vertexPose *v_pose = new vertexPose();
-			v_pose->setId(frame->getKeyID());
-			v_pose->setEstimate(frame->getPose());
-			optimizer.addVertex(v_pose);	
+			v_pose->setId(l_frame.first);
+			v_pose->setEstimate(l_frame.second->getPose());
+			optimizer.addVertex(v_pose);
+			vertices.insert({l_frame.first, v_pose});
+			if(l_frame.second->getKeyID() > max_kf_id)
+				max_kf_id = l_frame.first;	
 		}
 		//添加路标点
 		Eigen::Matrix<double, 3, 3> K = m_sets.mv_cameras[0].getK();
@@ -70,33 +75,107 @@ namespace MySlam
 		
 		int index = 1;
 		double chi2_th = 5.991;
-		//记录需要优化的定点,如果记录过了就不需要再添加这个定点的边了
-		map<unsigned long, mappoint> verticesLandmarks; 	
+		//记录需要优化的定点,如果记录过了就不需要再添加这个顶点的边了
+		map<unsigned long, vertexXYZ*> verticesLandmarks; 
+		map<edgeProjectionPoseAndXYZ*, feature::ptr> edges;
 		for(auto& point:activeMapPoints)
 		{
-			if(point->isOutLier())
-				continue;
 			//获取目标点的所有观察帧，遍历它们创建G2o的边和顶点
-			auto observations = point->getObservation();
+			auto observations = point.second->getObservation();
 			for(auto& feat:observations)
 			{
-				auto frame = feat->m_frame.lock();
-				if(feat->m_inlier || !frame )
+				auto l_frame = feat->m_frame.lock();
+				if(feat->m_inlier || !l_frame )
 					continue;
+				edgeProjectionPoseAndXYZ *edge = nullptr;
 				if(feat->m_isOnLeftImg)
 				{
-					edgeProjectionPoseAndXYZ *edge = new edgeProjectionPoseAndXYZ(K,left_ext);			
+					edge = new edgeProjectionPoseAndXYZ(K,left_ext);			
 				}
 				else
 				{
-					edgeProjectionPoseAndXYZ *edge = new edgeProjectionPoseAndXYZ(K,right_ext);			
+					edge = new edgeProjectionPoseAndXYZ(K,right_ext);			
 				}
-				if(verticesLandmarks.find(point->getID()) == verticesLandmarks.end())
+				if(verticesLandmarks.find(point.second->getID()) == verticesLandmarks.end())
 				{
 					//TODO: 添加新的顶点
-				}	
-			}			
-		}					
+					vertexXYZ *v = new vertexXYZ();
+					v->setEstimate(point.second->getEigenPose());
+					v->setId(point.second->getID() + max_kf_id + 1);
+					v->setMarginalized(true);
+					verticesLandmarks.insert({point.second->getID(),v});
+					optimizer.addVertex(v);		
+				}
+				if(edge == nullptr)
+				{
+					cout<<"!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!"<<endl;
+					return;
+				}
+				edge->setId(index);
+				edge->setVertex(0, vertices.at(l_frame->getKeyID()));				   
+				edge->setVertex(1, verticesLandmarks.at(point.second->getID()));
+				edge->setMeasurement(feat->getEigenPts());
+				edge->setInformation(Eigen::Matrix<double,2,2>::Identity());
+				auto rk = new g2o::RobustKernelHuber();
+				rk->setDelta(chi2_th);
+				edge->setRobustKernel(rk);
+				
+				optimizer.addEdge(edge);
+				edges.insert({edge,feat}); 
+				index++; 
+			}		
+		}
+		optimizer.initializeOptimization();
+		optimizer.optimize(20);
+		
+		//优化后，如果发现目标点不再当前帧的可视范围内，计算有多少不再可视范围内，如果超过了一半，就要调整阀值，防止损失太多的目标点影响最终的map构建
+		int iter = 5; 
+		double cntInlier = 0;
+		double cntOutlier = 0;	
+		do
+		{
+			for(auto& edge:edges)
+			{
+				if(edge.first->chi2() > chi2_th)
+				{
+					cntInlier++;	
+				}
+				else
+				{
+					cntOutlier++;
+				}
+			}
+			if(cntInlier / cntOutlier > 0.5)
+				break;
+			else
+				chi2_th *= 2;			
+		}while(iter-- != 0);
+		
+		//移除移除权重过大的特征点和目标点
+		for(auto& edge:edges)
+		{
+			if(edge.first->chi2() > chi2_th)
+			{
+				auto feat = edge.second;
+				feat->m_inlier = false;	
+				feat->m_mapPt.lock()->removeObservation(feat);	
+			}
+			else
+			{
+				auto feat = edge.second;
+				feat->m_inlier = true;
+			}
+		}
+		//设置优化后的目标三维点和位姿
+		for(auto& v:vertices)
+		{
+			activeFrames.at(v.first)->setPose(v.second->estimate());	
+		}
+		for(auto& mp:verticesLandmarks)
+		{
+			activeMapPoints.at(mp.first)->setPose(mp.second->estimate());
+		}
+			
 	}
-
+	
 }

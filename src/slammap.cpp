@@ -10,20 +10,20 @@ namespace MySlam
 		
 	void SLAMMap::insertPoints(mappoint::ptr point)
 	{
-		m_activeMapPoints.push_back(point);
+		m_activeMapPoints.insert({point->getID(),point});
 	}
 	
 	void SLAMMap::insertKeyFrame(frame::ptr frame)
 	{
-		m_activeFrames.push_back(frame);
+		m_activeFrames.insert({frame->getKeyID(),frame});
 	}
 
- 	const vector<mappoint::ptr>& SLAMMap::getActiveMapPoints()
+ 	const map<unsigned long,mappoint::ptr>& SLAMMap::getActiveMapPoints()
 	{
 		return m_activeMapPoints;
 	}
 	
-	const vector<frame::ptr>& SLAMMap::getActiveFrames()
+	const map<unsigned long,frame::ptr>& SLAMMap::getActiveFrames()
 	{
 		return m_activeFrames;
 	}

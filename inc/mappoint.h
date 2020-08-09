@@ -18,6 +18,10 @@ namespace MySlam
 			mappoint(cv::Mat pose);
 			~mappoint();
 			cv::Mat getPose();
+			void setPose(const Eigen::Matrix<double,3,1>& pose)
+			{
+				cv::eigen2cv(pose,m_pose);
+			}
 			Eigen::Matrix<double,3,1> getEigenPose()
 			{
 				Eigen::Matrix<double,3,1> pose;
@@ -25,6 +29,7 @@ namespace MySlam
 				return pose;	
 			}
 			void addObservation(feature::ptr feat);
+			void removeObservation(feature::ptr feat);
 			const list<feature::ptr>& getObservation()
 			{
 				return m_observations;

@@ -13,7 +13,6 @@ namespace MySlam
 	{
 
 	}
-
 	cv::Mat mappoint::getPose()
 	{
 		return m_pose;
@@ -23,7 +22,19 @@ namespace MySlam
 	{
 		m_observations.push_back(feat);
 	}
-	
+
+	void mappoint::removeObservation(feature::ptr feat)
+	{
+		list<feature::ptr>::iterator itr;
+		for(itr = m_observations.begin(); itr != m_observations.end();  itr++)
+		{
+			if(itr->get() == feat.get())
+			{
+				m_observations.erase(itr);
+			}
+		}		
+	}
+		
 	bool mappoint::isOutLier()
 	{
 		return m_outlier ? true:false;
