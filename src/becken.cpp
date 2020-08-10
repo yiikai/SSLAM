@@ -6,6 +6,7 @@ namespace MySlam
 
 	becken::becken(DataSets a_sets)
 	{
+		cout<<"create thread becken"<<endl;
 		m_sets = a_sets;
 		m_loop = new thread(&becken::beckenLoop, this);
 	}
@@ -26,10 +27,8 @@ namespace MySlam
 	
 	void becken::wakeUpBeckenLoop()
 	{
-				
 		std::unique_lock<std::mutex> lck(m_beckenloopmutex);
 		m_loopcv.notify_one();
-			
 	}
 
 	void becken::beckenLoop()
@@ -39,7 +38,7 @@ namespace MySlam
 			std::unique_lock<std::mutex> lck(m_beckenloopmutex);
 			m_loopcv.wait(lck);
 			//TODO: becken Optimizer
-			
+			optimizer();	
 		}	
 	}
 	
@@ -85,7 +84,7 @@ namespace MySlam
 			for(auto& feat:observations)
 			{
 				auto l_frame = feat->m_frame.lock();
-				if(feat->m_inlier || !l_frame )
+				if(!feat->m_inlier || !l_frame )
 					continue;
 				edgeProjectionPoseAndXYZ *edge = nullptr;
 				if(feat->m_isOnLeftImg)

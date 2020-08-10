@@ -34,9 +34,9 @@ namespace MySlam
 			{
 				m_currentFrame->setPose(m_relative_motion * m_lastFrame->getPose());
 			}
-			trackingLastFrame();
-			m_tracking_inlier = EstimateCurrentPose();
-			cout<<"current frame inlier: "<<m_tracking_inlier<<endl;
+			trackingLastFrame(); //寻找和上一帧match的features
+			m_tracking_inlier = EstimateCurrentPose(); //根据match的features优化
+			//cout<<"current frame inlier: "<<m_tracking_inlier<<endl;
 			if(m_tracking_inlier > m_num_feature_tracking)
 			{
 				m_status = E_TRACKING;
@@ -198,7 +198,7 @@ namespace MySlam
 				num_good_pts++;
 			}
 		}
-		cout<<"find "<<num_good_pts<<" in the last image"<<endl;
+		//cout<<"find match points: "<<num_good_pts<<" in the last image"<<endl;
 	}
 
 	void PrintMat(cv::Mat A)
@@ -240,28 +240,26 @@ namespace MySlam
 				m_currentFrame->m_rightKPs[i] != nullptr)
 			{
 				
-					if(m_currentFrame->m_rightKPs[i] == nullptr)
-							continue;
 					/* pixel point in camera coordinate */
 					cv::Point2f rcpts;  
 					cv::Point2f lcpts;
 					/*=================================*/
 
-					lcpts = m_sets.mv_cameras[0].pixel2camera(m_currentFrame->m_leftKPs[i]->getPts());
-					rcpts = m_sets.mv_cameras[1].pixel2camera(m_currentFrame->m_rightKPs[i]->getPts());
+					lcpts = m_sets.mv_cameras[0].pixel2camera(m_currentFrame->m_leftKPs[i]->getPts());  //左图camera坐标特征
+					rcpts = m_sets.mv_cameras[1].pixel2camera(m_currentFrame->m_rightKPs[i]->getPts()); //右图camera坐标特征
 					std::vector<cv::Point2f> l_lkps, l_rkps;
 					l_lkps.push_back(lcpts);
 					l_rkps.push_back(rcpts);	
 
 					cv::Mat mp; //point4D
+					//进行三角测量
 					cv::triangulatePoints(l_cv_camLpos,l_cv_camRpos,l_lkps,l_rkps,mp);
-					//cout<<mp<<endl;
 					homogeneous2normalcoordinate(mp);
-					//cout<<mp<<endl;
 					cv::Mat mp3D = mp.rowRange(0,3);
 					if(mp3D.at<float>(0,2) > 0)
 					{
-							mappoint::ptr newMapPoint = make_shared<mappoint>(mp3D);
+							//获取新的三维目标点
+							mappoint::ptr newMapPoint = make_shared<mappoint>(mp3D); 
 							m_currentFrame->m_leftKPs[i]->m_mapPt = newMapPoint;
 							m_currentFrame->m_rightKPs[i]->m_mapPt = newMapPoint;
 							newMapPoint->addObservation(m_currentFrame->m_leftKPs[i]);
@@ -324,10 +322,10 @@ namespace MySlam
 			{
 					if(status[i])
 					{
-							feature::ptr l_rf = make_shared<feature>(lv_rightKps[i]);
-							l_rf->m_frame = m_currentFrame;
-							l_rf->m_isOnLeftImg = false;	
-							m_currentFrame->m_rightKPs.push_back(l_rf);
+							feature::ptr l_rightfeat = make_shared<feature>(lv_rightKps[i]);
+							l_rightfeat->m_frame = m_currentFrame;
+							l_rightfeat->m_isOnLeftImg = false;	
+							m_currentFrame->m_rightKPs.push_back(l_rightfeat);
 							num_good_pts++;
 					}
 					else
@@ -335,9 +333,9 @@ namespace MySlam
 							m_currentFrame->m_rightKPs.push_back(nullptr);
 					}
 			}		
-			cout<<"match right key point: "<<num_good_pts<<endl;
-			cout<<"frame leftKP: "<<m_currentFrame->m_leftKPs.size()<<endl;
-			cout<<"frame rightKP: "<<m_currentFrame->m_rightKPs.size()<<endl;
+			//cout<<"match right key point: "<<num_good_pts<<endl;
+			//cout<<"frame leftKP: "<<m_currentFrame->m_leftKPs.size()<<endl;
+			//cout<<"frame rightKP: "<<m_currentFrame->m_rightKPs.size()<<endl;
 	}
 }
 
