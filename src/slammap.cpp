@@ -18,12 +18,12 @@ namespace MySlam
 		m_activeFrames.insert({frame->getKeyID(),frame});
 	}
 
- 	const map<unsigned long,mappoint::ptr>& SLAMMap::getActiveMapPoints()
+ 	const map<unsigned long,mappoint::ptr> SLAMMap::getActiveMapPoints()
 	{
 		return m_activeMapPoints;
 	}
 	
-	const map<unsigned long,frame::ptr>& SLAMMap::getActiveFrames()
+	const map<unsigned long,frame::ptr> SLAMMap::getActiveFrames()
 	{
 		return m_activeFrames;
 	}

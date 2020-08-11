@@ -60,7 +60,7 @@ namespace MySlam
 		sprintf(leftdir,fmt.c_str(),0,m_imgcount);
 		char rightdir[100];
 		sprintf(rightdir,fmt.c_str(),1,m_imgcount);
-		cout<<"left:"<< ms_DataPath + leftdir<<" right:"<<ms_DataPath + rightdir<<endl;
+//		cout<<"left:"<< ms_DataPath + leftdir<<" right:"<<ms_DataPath + rightdir<<endl;
 		m_imgcount++;
 		ls_left = cv::imread(ms_DataPath + leftdir,cv::IMREAD_GRAYSCALE);
 		ls_right = cv::imread(ms_DataPath + rightdir,cv::IMREAD_GRAYSCALE);

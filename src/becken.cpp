@@ -168,8 +168,10 @@ namespace MySlam
 		//设置优化后的目标三维点和位姿
 		for(auto& v:vertices)
 		{
-			activeFrames.at(v.first)->setPose(v.second->estimate());	
+			activeFrames.at(v.first)->setPose(v.second->estimate());
+			cout<<"frame ID:"<<v.first<<" pose is "<<v.second->estimate().matrix3x4()<<endl;	
 		}
+
 		for(auto& mp:verticesLandmarks)
 		{
 			activeMapPoints.at(mp.first)->setPose(mp.second->estimate());

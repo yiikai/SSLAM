@@ -28,9 +28,11 @@ namespace MySlam
 		list<feature::ptr>::iterator itr;
 		for(itr = m_observations.begin(); itr != m_observations.end();  itr++)
 		{
-			if(itr->get() == feat.get())
+			if(*itr == feat)
 			{
 				m_observations.erase(itr);
+				(*itr)->m_mapPt.reset();
+				break;
 			}
 		}		
 	}

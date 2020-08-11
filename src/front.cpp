@@ -39,6 +39,7 @@ namespace MySlam
 			//cout<<"current frame inlier: "<<m_tracking_inlier<<endl;
 			if(m_tracking_inlier > m_num_feature_tracking)
 			{
+				cout<<"inlier num: "<<m_tracking_inlier<<endl;
 				m_status = E_TRACKING;
 			}
 			else
@@ -148,7 +149,7 @@ namespace MySlam
 			}
 		}
 		m_currentFrame->setPose(vertex_pose->estimate());
-		//cout<<"Frame estimate pose: "<< m_currentFrame->getPose().matrix3x4()<<endl;
+		cout<<"Frame estimate pose: "<< m_currentFrame->getPose().matrix3x4()<<endl;
 		for(auto& m:features)
 		{
 			if( !(m->m_inlier) )
