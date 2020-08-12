@@ -20,6 +20,8 @@ namespace MySlam
 			frame::ptr nextFrame();				
 			string 	ms_DataPath;
 			std::vector<Camera> mv_cameras;  //left and right
+			Camera m_leftcamera;
+			Camera m_rightcamera;
 			int     m_imgcount = {0};
 	};
 }

@@ -45,8 +45,10 @@ namespace MySlam
 			double baseline = T.norm();
 			Sophus::SE3d rotation(Sophus::SO3d(), T);	
 			lc_camera.initCamera(K(0,0),K(1,1),K(0,2),K(1,2),baseline,rotation);
-		mv_cameras.push_back(lc_camera);	    		
+			mv_cameras.push_back(lc_camera);	    		
 		}
+		m_leftcamera = mv_cameras[0];
+		m_rightcamera = mv_cameras[1];
 		l_ReadConfig.close();
 		return true;
 	}

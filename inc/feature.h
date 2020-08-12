@@ -16,14 +16,14 @@ class feature
 		using ptr = shared_ptr<feature>;
 		feature(cv::Point2f& pt);
 		~feature();
-		cv::Point2f getPts() //get pixel point
+		cv::Point2f getPoint2f() //get pixel point
 		{
-			return m_pt;
+			return m_pt2f;
 		}
 
 		Eigen::Matrix<double,2,1> getEigenPts()
 		{
-			Eigen::Matrix<double,2,1> x(m_pt.x,m_pt.y);
+			Eigen::Matrix<double,2,1> x(m_pt2f.x,m_pt2f.y);
 			return x;
 		}
  
@@ -32,7 +32,7 @@ class feature
 		bool m_inlier = {true};
 		bool m_isOnLeftImg = {false};
 	private:
-		cv::Point2f m_pt; //pixel points 2D
+		cv::Point2f m_pt2f; //pixel points 2D
 };
 }
 
