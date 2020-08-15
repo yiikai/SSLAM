@@ -8,6 +8,7 @@ namespace MySlam
 	{
 		cout<<"create thread becken"<<endl;
 		m_sets = a_sets;
+        m_running = true;
 		m_loop = new thread(&becken::beckenLoop, this);
 	}
 	
@@ -19,7 +20,14 @@ namespace MySlam
 			delete m_loop;
 		}
 	}
-	
+    
+    void becken::stop()
+    {
+        m_running = false;
+        //再次出发条件变量防止再停止线程之前，后端线程就已经block了 
+		m_loopcv.notify_one();
+    }
+
 	void becken::addMap(SLAMMap::ptr a_newmap)
 	{
 		m_map = a_newmap;
@@ -33,12 +41,14 @@ namespace MySlam
 
 	void becken::beckenLoop()
 	{
-		while(1)
+		while(m_running)
 		{
+            cout<<"Optimizer all key frame!!!!!!!!!"<<endl;
 			std::unique_lock<std::mutex> lck(m_beckenloopmutex);
 			m_loopcv.wait(lck);
-			//TODO: becken Optimizer
-			optimizer();	
+			//becken Optimizer
+            if(m_running)
+			    optimizer();	
 		}	
 	}
 	
@@ -67,6 +77,7 @@ namespace MySlam
 			if(l_frame.second->getKeyID() > max_kf_id)
 				max_kf_id = l_frame.first;	
 		}
+
 		//添加路标点
 		Eigen::Matrix<double, 3, 3> K = m_sets.mv_cameras[0].getK();
 		SE3d left_ext = m_sets.mv_cameras[0].m_pose;
@@ -95,6 +106,13 @@ namespace MySlam
 				{
 					edge = new edgeProjectionPoseAndXYZ(K,right_ext);			
 				}
+
+                if(edge == nullptr)
+				{
+					cout<<"!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!"<<endl;
+					return;
+				}
+
 				if(verticesLandmarks.find(point.second->getID()) == verticesLandmarks.end())
 				{
 					//TODO: 添加新的顶点
@@ -105,12 +123,15 @@ namespace MySlam
 					verticesLandmarks.insert({point.second->getID(),v});
 					optimizer.addVertex(v);		
 				}
-				if(edge == nullptr)
-				{
-					cout<<"!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!"<<endl;
-					return;
-				}
+				
 				edge->setId(index);
+                try{
+                    vertices.at(l_frame->getKeyID());
+                }catch(exception& e)
+                {
+                    cout<<e.what()<<endl;
+                    continue;
+                }
 				edge->setVertex(0, vertices.at(l_frame->getKeyID()));				   
 				edge->setVertex(1, verticesLandmarks.at(point.second->getID()));
 				edge->setMeasurement(feat->getEigenPts());

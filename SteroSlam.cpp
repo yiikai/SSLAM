@@ -24,8 +24,15 @@ int main(int argc, char* * argv)
 	l_front.addBecken(l_becken);
 	while(1)
 	{
-		l_front.addFrame(sets.nextFrame());
+        frame::ptr lf = sets.nextFrame();
+        if(!lf)
+        {
+            cout<<"no frame any more"<<endl;
+            l_becken->stop();
+            break;
+        }
+		l_front.addFrame(lf);
 	}
-	
+    cout<<"THE END"<<endl;	
 	return 0;
 }

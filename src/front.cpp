@@ -12,7 +12,7 @@ namespace MySlam
 {
     frontEnd::frontEnd(DataSets& a_sets, SLAMMap::ptr a_newmap)
     {
-        mp_detector = cv::GFTTDetector::create();
+        mp_detector = cv::GFTTDetector::create(1000,0.01,20);
         m_sets = a_sets;
         m_map = a_newmap;
     }
@@ -39,7 +39,6 @@ namespace MySlam
             //cout<<"current frame inlier: "<<m_tracking_inlier<<endl;
             if(m_tracking_inlier > m_num_feature_tracking)
             {
-                cout<<"inlier num: "<<m_tracking_inlier<<endl;
                 m_status = E_TRACKING;
             }
             else
@@ -66,8 +65,6 @@ namespace MySlam
 
     void frontEnd::insertKeyFrame()
     {
-        if( m_tracking_inlier > m_num_feature_need_for_keyframe)
-            return ;
         m_currentFrame->setKeyFrame();
         //将当前观测到的mappoint和feature联系起来，因为上一帧不是重新detetcet特征的，而是根据前一帧算出来的，所以相关的mappoint和feature没有联系起来
         addObservationToMapPoint();  //NOTE: 关联的原因是mappoint可能会被很多的frame看到，图有化的结构想一想就知道了	
@@ -77,7 +74,6 @@ namespace MySlam
         calcMapPoint();
         m_becken->wakeUpBeckenLoop();						
     }
-
 
 
     int frontEnd::EstimateCurrentPose()
@@ -149,7 +145,7 @@ namespace MySlam
             }
         }
         m_currentFrame->setPose(vertex_pose->estimate());
-        cout<<"Frame estimate pose: "<< m_currentFrame->getPose().matrix3x4()<<endl;
+        //cout<<"Frame estimate pose: "<< m_currentFrame->getPose().matrix3x4()<<endl;
         for(auto& m:features)
         {
             if( !(m->m_inlier) )
@@ -275,8 +271,13 @@ namespace MySlam
 
     void frontEnd::detectedFeature()
     {
+        cv::Mat mask(m_currentFrame->m_leftImg.size(), CV_8UC1, 255);
+        for (auto &feat : m_currentFrame->m_leftKPs) {
+            cv::rectangle(mask, feat->getPoint2f() - cv::Point2f(10, 10),
+                    feat->getPoint2f() + cv::Point2f(10, 10), 0, cv::FILLED);
+        }
         std::vector<cv::KeyPoint> keypoints;
-        mp_detector->detect(m_currentFrame->m_leftImg, keypoints);
+        mp_detector->detect(m_currentFrame->m_leftImg, keypoints, mask);
         std::vector<cv::Point2f> keypoints2f;
         cv::KeyPoint::convert(keypoints, keypoints2f);
         for(auto& k:keypoints2f)
@@ -286,8 +287,8 @@ namespace MySlam
             feat->m_isOnLeftImg = true;
             m_currentFrame->m_leftKPs.push_back(feat);	
         }
-        m_currentFrame->showFrameWithKeyPoint(keypoints);
-        cv::waitKey(0);
+        //m_currentFrame->showFrameWithKeyPoint(keypoints);
+        //cv::waitKey(0);
     }
 
     unsigned int frontEnd::findFeatureInRight()

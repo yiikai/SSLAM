@@ -22,6 +22,7 @@ public:
 	void beckenLoop();
 	void wakeUpBeckenLoop();
 	void addMap(SLAMMap::ptr a_newmap);
+    void stop();
 private:
 	void optimizer();	
 private:
@@ -29,7 +30,8 @@ private:
 	mutex m_beckenloopmutex;
 	condition_variable m_loopcv;
 	SLAMMap::ptr m_map;
-	DataSets m_sets;	
+	DataSets m_sets;
+    bool m_running = {false}; //becken thread if running	
 };
 }
 

@@ -1,5 +1,6 @@
 #include "DataSets.h"
 #include <stdio.h>
+#include <unistd.h>
 #include <fstream>
 #include <sstream>
 #include "sophus/se3.hpp"
@@ -64,6 +65,11 @@ namespace MySlam
 		sprintf(rightdir,fmt.c_str(),1,m_imgcount);
 //		cout<<"left:"<< ms_DataPath + leftdir<<" right:"<<ms_DataPath + rightdir<<endl;
 		m_imgcount++;
+        if(access((ms_DataPath + leftdir).c_str(),0) == -1)
+        {
+            cout<<"file no exsit"<<endl;
+            return nullptr;
+        }
 		ls_left = cv::imread(ms_DataPath + leftdir,cv::IMREAD_GRAYSCALE);
 		ls_right = cv::imread(ms_DataPath + rightdir,cv::IMREAD_GRAYSCALE);
 		frame::ptr lp_newframe = std::make_shared<frame>();

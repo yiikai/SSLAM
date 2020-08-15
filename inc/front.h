@@ -53,8 +53,7 @@ namespace MySlam
 			Sophus::SE3d m_relative_motion;   //假设的当前frame相对于上一个frame的位姿
 			SLAMMap::ptr m_map;  //slam的最终地图数据
 			int m_tracking_inlier = {0};
-			int m_num_feature_tracking = {120};
-			int m_num_feature_need_for_keyframe = {80};
+			int m_num_feature_tracking = {20};
 			becken::ptr m_becken = {nullptr};
 	};
 }

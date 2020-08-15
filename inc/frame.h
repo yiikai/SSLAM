@@ -46,7 +46,7 @@ namespace MySlam
 
 			long getKeyID()
 			{
-				return m_keyFrame;
+    			return m_keyFrameID;
 			}
 	
 			cv::Mat m_leftImg;
