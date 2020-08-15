@@ -190,7 +190,7 @@ namespace MySlam
 		for(auto& v:vertices)
 		{
 			activeFrames.at(v.first)->setPose(v.second->estimate());
-			cout<<"frame ID:"<<v.first<<" pose is "<<v.second->estimate().matrix3x4()<<endl;	
+			//cout<<"frame ID:"<<v.first<<" pose is "<<v.second->estimate().matrix3x4()<<endl;	
 		}
 
 		for(auto& mp:verticesLandmarks)
