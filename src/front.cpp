@@ -6,7 +6,7 @@
 #include <vector>
 #include <opencv2/core/eigen.hpp>
 #include "optimizerG2o.h"
-
+#include "gMutex.h"
 using namespace std;
 namespace MySlam
 {
@@ -67,8 +67,10 @@ namespace MySlam
     {
         m_currentFrame->setKeyFrame();
         //将当前观测到的mappoint和feature联系起来，因为上一帧不是重新detetcet特征的，而是根据前一帧算出来的，所以相关的mappoint和feature没有联系起来
-        addObservationToMapPoint();  //NOTE: 关联的原因是mappoint可能会被很多的frame看到，图有化的结构想一想就知道了	
+        
         m_map->insertKeyFrame(m_currentFrame);	
+        addObservationToMapPoint();  //NOTE: 关联的原因是mappoint可能会被很多的frame看到，图有化的结构想一想就知道了
+        	
         detectedFeature();
         findFeatureInRight();
         calcMapPoint();
@@ -228,7 +230,6 @@ namespace MySlam
         cv::Mat l_camRposcv = cv::Mat(3,4,CV_64FC4);
         cv::eigen2cv(l_poseL.matrix3x4(),l_camLposcv);
         cv::eigen2cv(l_poseR.matrix3x4(),l_camRposcv);
-
         for(int i=0; i < m_currentFrame->m_leftKPs.size(); i++)
         {
             //首帧或位姿一旦不准，重新获取最新的三维目标点	
@@ -265,7 +266,7 @@ namespace MySlam
             }
         }
         m_currentFrame->setKeyFrame();
-        m_map->insertKeyFrame(m_currentFrame);	
+        m_map->insertKeyFrame(m_currentFrame);
         m_status = E_STATUS::E_TRACKING;
     }
 
@@ -334,7 +335,7 @@ namespace MySlam
                 m_currentFrame->m_rightKPs.push_back(nullptr);
             }
         }
-        cout<<"match points: "<<num_good_pts<<endl;
+        //cout<<"match points: "<<num_good_pts<<endl;
         return num_good_pts;		
         //cout<<"frame leftKP: "<<m_currentFrame->m_leftKPs.size()<<endl;
         //cout<<"frame rightKP: "<<m_currentFrame->m_rightKPs.size()<<endl;

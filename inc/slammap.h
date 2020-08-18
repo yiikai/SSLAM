@@ -21,7 +21,6 @@ class SLAMMap
 	private:
 		map<unsigned long,mappoint::ptr> m_activeMapPoints;
 		map<unsigned long,frame::ptr> m_activeFrames;
-		
 };
 
 }

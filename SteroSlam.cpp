@@ -11,10 +11,13 @@
 #include "inc/DataSets.h"
 #include "front.h"
 #include "slammap.h"
+#include <pangolin/pangolin.h>
+
 using namespace MySlam;
 
 int main(int argc, char* * argv)
 {
+
 	string path = "/home/yiikai/Develop/MySlam/resource/21";
 	DataSets sets(path);
 	sets.init();
@@ -34,5 +37,6 @@ int main(int argc, char* * argv)
 		l_front.addFrame(lf);
 	}
     cout<<"THE END"<<endl;	
+    
 	return 0;
 }

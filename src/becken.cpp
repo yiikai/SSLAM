@@ -1,5 +1,6 @@
 #include "becken.h"
 #include "optimizerG2o.h"
+#include "gMutex.h"
 #include <map>
 namespace MySlam
 {
@@ -43,7 +44,6 @@ namespace MySlam
 	{
 		while(m_running)
 		{
-            cout<<"Optimizer all key frame!!!!!!!!!"<<endl;
 			std::unique_lock<std::mutex> lck(m_beckenloopmutex);
 			m_loopcv.wait(lck);
 			//becken Optimizer
@@ -125,11 +125,9 @@ namespace MySlam
 				}
 				
 				edge->setId(index);
-                try{
-                    vertices.at(l_frame->getKeyID());
-                }catch(exception& e)
+                if(vertices.find(l_frame->getKeyID()) == vertices.end())
                 {
-                    cout<<e.what()<<endl;
+                    cout<<"feat frame not key frame"<<endl;
                     continue;
                 }
 				edge->setVertex(0, vertices.at(l_frame->getKeyID()));				   
