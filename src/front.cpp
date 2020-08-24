@@ -17,6 +17,11 @@ namespace MySlam
         m_map = a_newmap;
     }
 
+    void frontEnd::setViewer(Viewer::ptr viewer)
+    {
+        m_viewer = viewer;
+    }
+
     void frontEnd::addFrame(frame::ptr newframe) 
     {
         m_currentFrame = newframe;
@@ -47,6 +52,8 @@ namespace MySlam
                 insertKeyFrame();					
             }
             m_relative_motion = m_currentFrame->getPose() * m_lastFrame->getPose().inverse();
+            if(m_viewer)
+                m_viewer->AddCurrentFrame(m_currentFrame);
         }
 
     }
@@ -226,8 +233,8 @@ namespace MySlam
         Sophus::SE3d l_poseL, l_poseR;
         l_poseL = m_sets.m_leftcamera.m_pose;
         l_poseR = m_sets.m_rightcamera.m_pose;
-        cv::Mat l_camLposcv = cv::Mat(3,4,CV_64FC4);
-        cv::Mat l_camRposcv = cv::Mat(3,4,CV_64FC4);
+        cv::Mat l_camLposcv = cv::Mat(3,4,CV_32FC1);
+        cv::Mat l_camRposcv = cv::Mat(3,4,CV_32FC1);
         cv::eigen2cv(l_poseL.matrix3x4(),l_camLposcv);
         cv::eigen2cv(l_poseR.matrix3x4(),l_camRposcv);
         for(int i=0; i < m_currentFrame->m_leftKPs.size(); i++)
@@ -244,13 +251,15 @@ namespace MySlam
 
                 lcpt = m_sets.m_leftcamera.pixel2camera(m_currentFrame->m_leftKPs[i]->getPoint2f());  //左图camera坐标特征
                 rcpt = m_sets.m_rightcamera.pixel2camera(m_currentFrame->m_rightKPs[i]->getPoint2f()); //右图camera坐标特征
-                std::vector<cv::Point2f> l_lkps, l_rkps;
-                l_lkps.push_back(lcpt);
-                l_rkps.push_back(rcpt);	
+                float d1[2] = {lcpt.x,lcpt.y};
+                cv::Mat pts1 = cv::Mat(2,1,CV_32FC1,d1);
+
+                float d2[2] = {rcpt.x,rcpt.y};
+                cv::Mat pts2 = cv::Mat(2,1,CV_32FC1,d2);
 
                 cv::Mat homogeneous4D; //point4D
                 //进行三角测量, 接口需要矩阵或是vector形式,所以用vector类型
-                cv::triangulatePoints(l_camLposcv,l_camRposcv,l_lkps,l_rkps,homogeneous4D);
+                cv::triangulatePoints(l_camLposcv,l_camRposcv,pts1,pts2,homogeneous4D);
                 homogeneous2normalcoordinate(homogeneous4D);
                 cv::Mat mp3D = homogeneous4D.rowRange(0,3);
                 if(mp3D.at<float>(0,2) > 0)
@@ -289,7 +298,12 @@ namespace MySlam
             m_currentFrame->m_leftKPs.push_back(feat);	
         }
         //m_currentFrame->showFrameWithKeyPoint(keypoints);
-        //cv::waitKey(0);
+        //cv::waitKey(1);
+        if(m_viewer)
+        {
+            m_viewer->AddCurrentFrame(m_currentFrame);
+            m_viewer->UpdateMap();
+        }
     }
 
     unsigned int frontEnd::findFeatureInRight()

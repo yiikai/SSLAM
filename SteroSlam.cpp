@@ -11,7 +11,6 @@
 #include "inc/DataSets.h"
 #include "front.h"
 #include "slammap.h"
-#include "viewer.h"
 using namespace MySlam;
 
 void DrawFrame(frame::ptr frame, const float* color);
@@ -23,8 +22,11 @@ int main(int argc, char* * argv)
 	sets.init();
 	SLAMMap::ptr lp_newmap = make_shared<SLAMMap>();
 	becken::ptr l_becken = make_shared<becken>(sets);
+    Viewer::ptr l_viewer = make_shared<Viewer>();
 	frontEnd l_front(sets, lp_newmap);
 	l_front.addBecken(l_becken);
+    l_viewer->SetMap(lp_newmap);
+    l_front.setViewer(l_viewer);
 	while(1)
 	{
         frame::ptr lf = sets.nextFrame();
@@ -38,41 +40,7 @@ int main(int argc, char* * argv)
 	}
     cout<<"THE END"<<endl;	
      
-    //record all key frame pose
-    const float red[3] = {1.0, 0, 0};
-    pangolin::CreateWindowAndBind("MySLAM", 1024, 768);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    pangolin::OpenGlRenderState vis_camera(
-            pangolin::ProjectionMatrix(1024, 768, 400, 400, 512, 384, 0.1, 1000),
-            pangolin::ModelViewLookAt(0, -5, -10, 0, 0, 0, 0.0, -1.0, 0.0));
-
-    // Add named OpenGL viewport to window and provide 3D Handler
-    pangolin::View& vis_display =
-        pangolin::CreateDisplay()
-        .SetBounds(0.0, 1.0, 0.0, 1.0, -1024.0f / 768.0f)
-        .SetHandler(new pangolin::Handler3D(vis_camera));
-
-    const float blue[3] = {0, 0, 1};
-    const float green[3] = {0, 1, 0};
-
-    while (!pangolin::ShouldQuit()) {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        vis_display.Activate(vis_camera);
-
-        auto keyframes = lp_newmap->getActiveFrames();
-        for(auto& f:keyframes)
-        {
-            cout<<f.second->getPose().matrix3x4()<<endl;
-            DrawFrame(f.second, red);    
-        }
-
-        pangolin::FinishFrame();
-    }
-
+    
 	return 0;
 }
 

@@ -10,6 +10,8 @@
 #include <sophus/se3.hpp>
 #include "slammap.h"
 #include "becken.h"
+#include "viewer.h"
+
 namespace MySlam
 {
 
@@ -18,6 +20,7 @@ namespace MySlam
 		public:
 			frontEnd(DataSets& a_sets, SLAMMap::ptr a_newmap);
 			~frontEnd(){}
+            void setViewer(Viewer::ptr viewer);
 			void addFrame(frame::ptr newframe);
 			void addBecken(becken::ptr becken)
 			{
@@ -55,6 +58,7 @@ namespace MySlam
 			int m_tracking_inlier = {0};
 			int m_num_feature_tracking = {25};
 			becken::ptr m_becken = {nullptr};
+            Viewer::ptr m_viewer = {nullptr};
 	};
 }
 #endif

@@ -15,7 +15,7 @@ namespace MySlam
 	
 	void SLAMMap::insertKeyFrame(frame::ptr frame)
 	{
-        cout<<"add key frame "<<frame->getKeyID()<<endl;
+//        cout<<"add key frame "<<frame->getKeyID()<<endl;
 		m_activeFrames.insert({frame->getKeyID(),frame});
 	}
 

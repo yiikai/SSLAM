@@ -8,7 +8,7 @@
 #include <pangolin/pangolin.h>
 #include "sophus/se3.hpp"
 #include <opencv2/opencv.hpp>
-
+#include <iostream>
 namespace MySlam {
 
 Viewer::Viewer() {
@@ -28,8 +28,8 @@ void Viewer::AddCurrentFrame(frame::ptr current_frame) {
 void Viewer::UpdateMap() {
     std::unique_lock<std::mutex> lck(viewer_data_mutex_);
     assert(map_ != nullptr);
-    //active_keyframes_ = map_->getActiveFrames();
-    //active_landmarks_ = map_->getActiveMapPoints();
+    active_keyframes_ = map_->getActiveFrames();
+    active_landmarks_ = map_->getActiveMapPoints();
     map_updated_ = true;
 }
 
@@ -58,7 +58,6 @@ void Viewer::ThreadLoop() {
         vis_display.Activate(vis_camera);
 
         std::unique_lock<std::mutex> lock(viewer_data_mutex_);
-#if 0
         if (current_frame_) {
             DrawFrame(current_frame_, green);
             FollowCurrentFrame(vis_camera);
@@ -72,7 +71,6 @@ void Viewer::ThreadLoop() {
             DrawMapPoints();
         }
 
-#endif
         pangolin::FinishFrame();
         usleep(5000);
     }
@@ -81,29 +79,25 @@ void Viewer::ThreadLoop() {
 
 cv::Mat Viewer::PlotFrameImage() {
     cv::Mat img_out;
-#if 0
-    cv::cvtColor(current_frame_->left_img_, img_out, CV_GRAY2BGR);
-    for (size_t i = 0; i < current_frame_->features_left_.size(); ++i) {
-        if (current_frame_->features_left_[i]->map_point_.lock()) {
-            auto feat = current_frame_->features_left_[i];
-            cv::circle(img_out, feat->position_.pt, 2, cv::Scalar(0, 250, 0),
+    cv::cvtColor(current_frame_->m_leftImg, img_out, cv::COLOR_GRAY2BGR);
+    for (size_t i = 0; i < current_frame_->m_leftKPs.size(); ++i) {
+        if (current_frame_->m_leftKPs[i]->m_mapPt.lock()) {
+            auto feat = current_frame_->m_leftKPs[i];
+            cv::circle(img_out, feat->getPoint2f(), 2, cv::Scalar(0, 250, 0),
                        2);
         }
     }
-#endif
     return img_out;
 }
 
 void Viewer::FollowCurrentFrame(pangolin::OpenGlRenderState& vis_camera) {
-#if 0
-    Sophus::SE3d Twc = current_frame_->Pose().inverse();
+    Sophus::SE3d Twc = current_frame_->getPose().inverse();
     pangolin::OpenGlMatrix m(Twc.matrix());
     vis_camera.Follow(m, true);
-#endif
 }
 
 void Viewer::DrawFrame(frame::ptr frame, const float* color) {
-    Sophus::SE3d Twc = frame->getPose().inverse();
+    Sophus::SE3d Twc = frame->getPose();
     const float sz = 1.0;
     const int line_width = 2.0;
     const float fx = 400;
@@ -116,6 +110,8 @@ void Viewer::DrawFrame(frame::ptr frame, const float* color) {
     glPushMatrix();
 
     Sophus::Matrix4f m = Twc.matrix().template cast<float>();
+    cout<<m<<endl;
+    cout<<"============="<<endl;
     glMultMatrixf((GLfloat*)m.data());
 
     if (color == nullptr) {
@@ -151,21 +147,20 @@ void Viewer::DrawFrame(frame::ptr frame, const float* color) {
 }
 
 void Viewer::DrawMapPoints() {
-#if 0
     const float red[3] = {1.0, 0, 0};
+    const float blue[3] = {0 , 0, 1};
     for (auto& kf : active_keyframes_) {
-        DrawFrame(kf.second, red);
+        DrawFrame(kf.second, blue);
     }
 
     glPointSize(2);
     glBegin(GL_POINTS);
     for (auto& landmark : active_landmarks_) {
-        auto pos = landmark.second->Pos();
+        auto pos = landmark.second->getEigenPose();
         glColor3f(red[0], red[1], red[2]);
-        glVertex3d(pos[0], pos[1], pos[2]);
+        glVertex3d(pos[0]/100, pos[1]/100, pos[2]/100);
     }
     glEnd();
-#endif
 }
 
 }  // namespace myslam

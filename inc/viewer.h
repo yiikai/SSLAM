@@ -51,8 +51,8 @@ class Viewer {
     std::thread viewer_thread_;
     bool viewer_running_ = true;
 
-    std::unordered_map<unsigned long, frame::ptr> active_keyframes_;
-    std::unordered_map<unsigned long, mappoint::ptr> active_landmarks_;
+    std::map<unsigned long, frame::ptr> active_keyframes_;
+    std::map<unsigned long, mappoint::ptr> active_landmarks_;
     bool map_updated_ = false;
 
     std::mutex viewer_data_mutex_;
