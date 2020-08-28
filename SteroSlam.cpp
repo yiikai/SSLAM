@@ -7,16 +7,50 @@
 #include <g2o/solvers/csparse/linear_solver_csparse.h>
 #include <g2o/core/optimization_algorithm_gauss_newton.h>
 #include <g2o/core/robust_kernel_impl.h>
+#include <opencv2/features2d/features2d.hpp>
 #include "sophus/se3.hpp"
 #include "inc/DataSets.h"
 #include "front.h"
 #include "slammap.h"
 using namespace MySlam;
-
-void DrawFrame(frame::ptr frame, const float* color);
+using namespace cv;
 int main(int argc, char* * argv)
 {
 
+    string img1path = "/home/yiikai/Develop/MySlam/resource/21/image_0/000000.png";
+    string img2path = "/home/yiikai/Develop/MySlam/resource/21/image_0/000001.png";
+    cv::Mat img1 = cv::imread(img1path);
+    cv::Mat img2 = cv::imread(img2path);
+    cv::Ptr<cv::ORB> orb = cv::ORB::create();
+    std::vector<cv::KeyPoint> keypoints1,keypoints2;
+    cv::Mat descriptors1,descriptors2;
+    orb->detectAndCompute(img1,cv::Mat(),keypoints1,descriptors1);
+    orb->detectAndCompute(img2,cv::Mat(),keypoints2,descriptors2);
+    cv::BFMatcher matcher(NORM_HAMMING);
+    std::vector<DMatch> mathces;
+	matcher.match(descriptors1, descriptors2, mathces);
+    //drawKeypoints(img1, keypoints, img1, cv::Scalar(0, 0, 255), cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
+    double min_dist = 10000, max_dist = 0;
+    for(int i = 0; i < descriptors1.rows; i++)
+    {
+        if(mathces[i].distance < min_dist)
+            min_dist = mathces[i].distance;
+        if(mathces[i].distance > max_dist)
+            max_dist = mathces[i].distance;
+    }
+    cout<<"max distance: "<<max_dist<<endl;
+    cout<<"min distance: "<<min_dist<<endl;
+    std::vector<DMatch> filterMathces;
+    for(int i = 0; i < descriptors1.rows; i++)
+    {
+        if(mathces[i].distance <= max(2 * min_dist, 100.0))
+            filterMathces.push_back(mathces[i]);
+    }
+	Mat matchMat;
+	drawMatches(img1, keypoints1, img2, keypoints2, filterMathces, matchMat);
+    imshow("match feature",matchMat);
+    cv::waitKey(0);
+#if 0
 	string path = "/home/yiikai/Develop/MySlam/resource/21";
 	DataSets sets(path);
 	sets.init();
@@ -39,56 +73,9 @@ int main(int argc, char* * argv)
 		l_front.addFrame(lf);
 	}
     cout<<"THE END"<<endl;	
-     
+#endif
     
 	return 0;
 }
 
-void DrawFrame(frame::ptr frame, const float* color) {
-    Sophus::SE3d Twc = frame->getPose().inverse();
-    const float sz = 1.0;
-    const int line_width = 2.0;
-    const float fx = 400;
-    const float fy = 400;
-    const float cx = 512;
-    const float cy = 384;
-    const float width = 1080;
-    const float height = 768;
-
-    glPushMatrix();
-
-    Sophus::Matrix4f m = Twc.matrix().template cast<float>();
-    glMultMatrixf((GLfloat*)m.data());
-
-    if (color == nullptr) {
-        glColor3f(1, 0, 0);
-    } else
-        glColor3f(color[0], color[1], color[2]);
-
-    glLineWidth(line_width);
-    glBegin(GL_LINES);
-    glVertex3f(0, 0, 0);
-    glVertex3f(sz * (0 - cx) / fx, sz * (0 - cy) / fy, sz);
-    glVertex3f(0, 0, 0);
-    glVertex3f(sz * (0 - cx) / fx, sz * (height - 1 - cy) / fy, sz);
-    glVertex3f(0, 0, 0);
-    glVertex3f(sz * (width - 1 - cx) / fx, sz * (height - 1 - cy) / fy, sz);
-    glVertex3f(0, 0, 0);
-    glVertex3f(sz * (width - 1 - cx) / fx, sz * (0 - cy) / fy, sz);
-
-    glVertex3f(sz * (width - 1 - cx) / fx, sz * (0 - cy) / fy, sz);
-    glVertex3f(sz * (width - 1 - cx) / fx, sz * (height - 1 - cy) / fy, sz);
-
-    glVertex3f(sz * (width - 1 - cx) / fx, sz * (height - 1 - cy) / fy, sz);
-    glVertex3f(sz * (0 - cx) / fx, sz * (height - 1 - cy) / fy, sz);
-
-    glVertex3f(sz * (0 - cx) / fx, sz * (height - 1 - cy) / fy, sz);
-    glVertex3f(sz * (0 - cx) / fx, sz * (0 - cy) / fy, sz);
-
-    glVertex3f(sz * (0 - cx) / fx, sz * (0 - cy) / fy, sz);
-    glVertex3f(sz * (width - 1 - cx) / fx, sz * (0 - cy) / fy, sz);
-
-    glEnd();
-    glPopMatrix();
-}
 
