@@ -25,13 +25,57 @@ float getScaleFactor(int level)
     return scale;
 }
 
+const int EDGE_THRESHOLD = 19;
+std::vector<Mat> mvImagePyramidL(8);
+std::vector<Mat> mvImagePyramidR(8);
+void ComputePyramid(cv::Mat image, const int nlevels, std::vector<Mat>& mvImagePyramid)
+{
+    for (int level = 0; level < nlevels; ++level)
+    {
+        float scale = 1.0f/getScaleFactor(level);
+        Size sz(cvRound((float)image.cols*scale), cvRound((float)image.rows*scale));
+        Size wholeSize(sz.width + EDGE_THRESHOLD*2, sz.height + EDGE_THRESHOLD*2);
+        Mat temp(wholeSize, image.type()), masktemp;
+        mvImagePyramid[level] = temp(Rect(EDGE_THRESHOLD, EDGE_THRESHOLD, sz.width, sz.height));
+
+        // Compute the resized image
+        if( level != 0 )
+        {
+            resize(mvImagePyramid[level-1], mvImagePyramid[level], sz, 0, 0, INTER_LINEAR);
+
+            copyMakeBorder(mvImagePyramid[level], temp, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
+                           BORDER_REFLECT_101+BORDER_ISOLATED);
+        }
+        else
+        {
+            copyMakeBorder(image, temp, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD, EDGE_THRESHOLD,
+                           BORDER_REFLECT_101);
+        }
+    }
+    for(int i =0 ; i < 8 ; i++)
+    {
+        imshow("match feature",mvImagePyramid[i]);
+        cv::waitKey(0);
+    }
+
+}
+
+
 int main(int argc, char* * argv)
 {
+    string path = "/home/yiikai/Develop/MySlam/resource/21";
+	DataSets sets(path);
+	sets.init();
 
     string img1path = "/home/yiikai/Develop/MySlam/resource/21/image_0/000000.png";
     string img2path = "/home/yiikai/Develop/MySlam/resource/21/image_0/000001.png";
     cv::Mat img1 = cv::imread(img1path);
     cv::Mat img2 = cv::imread(img2path);
+
+    //计算ORB的金字塔图层的每一层的size
+    ComputePyramid(img1,8,mvImagePyramidL);
+    ComputePyramid(img2,8,mvImagePyramidR);
+
     cv::Ptr<cv::ORB> orbleft = cv::ORB::create(500,SCALE_FACTOR,8,31,0,2,ORB::FAST_SCORE);
     cv::Ptr<cv::ORB> orbright = cv::ORB::create(500,SCALE_FACTOR,8,31,0,2,ORB::FAST_SCORE);
 
@@ -58,11 +102,101 @@ int main(int argc, char* * argv)
         const float r = 2.0f * getScaleFactor(kp.octave);
         const float maxRange = ceil(y + r);
         const float minRange = floor(y - r);
-        cout<<minRange<<endl;
         for(int i = minRange; i < maxRange; i++)
         {
             vRowIndices[i].push_back(iR);
         }
+    }
+    std::vector<pair<int,int>> vPair(keypointsL.size());
+    //对左图的每一个特征点寻找一个匹配的右图的特征点
+    for(int iL = 0; iL < keypointsL.size(); iL++)
+    {
+        cv::KeyPoint kpL = keypointsL[iL];
+        const float y = kpL.pt.y;
+        const float x = kpL.pt.x;
+        int levelL = kpL.octave;
+        auto candicates = vRowIndices[y];
+        if(candicates.empty())
+            continue;
+
+        float mindist = 1000;
+        int bestiR = 0;
+        for(auto& iR:candicates)
+        {
+            cv::KeyPoint kpR = keypointsR[iR];
+            int levelR = kpR.octave;
+            if(levelR < levelL -1 && levelR > levelL +1) //特征点金字塔级别太大的不考虑
+                continue;
+            const cv::Mat dL = descriptorsL.row(iL);
+            const cv::Mat dR = descriptorsR.row(iR);
+            cv::BFMatcher matcher(NORM_HAMMING);
+            std::vector<DMatch> mathces;
+            matcher.match(dL, dR, mathces);
+            //从匹配的matches中选出好的那个匹配对
+            for(auto& match:mathces)
+            {
+                if(match.distance < mindist)
+                {
+                    mindist = match.distance;
+                    bestiR = iR;
+                }
+            }
+        }
+    
+        const int orbTH = 80;
+        if(mindist > 80)
+            continue;
+        
+        //SAD 进一步优化匹配的特征点的精度
+        float scalefactorL =  getScaleFactor(levelL);
+        float scalefactorInvL = 1/getScaleFactor(levelL);
+        int xL = round(x*scalefactorInvL);
+        int yL = round(y*scalefactorInvL);
+        int xR = round(keypointsR[bestiR].pt.x * scalefactorInvL);
+       
+        int w = 5;
+        int steps = 5;
+        int bestDist = 10000;
+        int beststep = 0;
+        std::vector<float> vdist(2*steps + 1);
+         
+        cv::Mat IL = mvImagePyramidL[levelL].rowRange(yL-w, yL+w+1).colRange(xL-w, xL+w+1); //定义sad slide window
+        //归一化
+        IL.convertTo(IL,CV_32F);
+        IL = IL - IL.at<float>(w,w) * cv::Mat::ones(IL.rows,IL.cols,CV_32F);
+        const float iniu = xR + steps - w;
+        const float endu = xR + steps + w + 1;
+        if(iniu <  0 || endu > mvImagePyramidR[levelL].cols)
+            continue;
+         
+        for(int i = -steps; i <= steps; i++)
+        {
+            cv::Mat IR = mvImagePyramidR[levelL].rowRange(yL-w,yL+w+1).colRange(xR+i-w, xR+i+w+1);
+            IR.convertTo(IL,CV_32F);
+            IR = IR - IR.at<float>(w,w) * cv::Mat::ones(IR.rows,IL.cols,CV_32F);
+            
+            float dist = cv::norm(IL,IR,cv::NORM_L1);
+            if(dist < bestDist)
+            {
+                bestDist = dist;
+                beststep = i;
+            }
+            vdist[i + w] = dist;
+        }        
+
+        if(beststep == -steps || beststep == steps)  //根据sad原理，最佳值再所有距离组成的抛物线低端，不可能是再两个头的
+            continue; 
+        const float dist1 = vdist[steps + bestDist - 1];
+        const float dist2 = vdist[steps + bestDist];
+        const float dist3 = vdist[steps + bestDist + 1];
+
+        const float deltaR = (dist1 - dist2)/(2.0f*(dist1 + dist3 - 2.0f*dist2));
+        if(deltaR < -1 || deltaR > 1)
+            continue;
+
+        float bestUR = scalefactorL * static_cast<float>(bestiR + beststep + deltaR);
+        cout<<bestUR<<endl;
+        
     }
 
 #if 0 //比较粗糙的特征匹配筛选
