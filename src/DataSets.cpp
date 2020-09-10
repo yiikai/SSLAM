@@ -70,8 +70,10 @@ namespace MySlam
             cout<<"file no exsit"<<endl;
             return nullptr;
         }
-		ls_left = cv::imread(ms_DataPath + leftdir,cv::IMREAD_GRAYSCALE);
-		ls_right = cv::imread(ms_DataPath + rightdir,cv::IMREAD_GRAYSCALE);
+		ls_left = cv::imread(ms_DataPath + leftdir);
+        cout<<"left: "<<ms_DataPath+leftdir<<endl;
+		ls_right = cv::imread(ms_DataPath + rightdir);
+        cout<<"right: "<<ms_DataPath+rightdir<<endl;
 		frame::ptr lp_newframe = std::make_shared<frame>();
 		lp_newframe->m_leftImg = ls_left;
 		lp_newframe->m_rightImg = ls_right;

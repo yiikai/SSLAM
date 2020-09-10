@@ -3,8 +3,9 @@ set(OpenCV_DIR ../VisualSlam/ThirdParty/opencv-4.3.0/build)
 find_package( OpenCV REQUIRED)
 
 project(bundle_adjustment)
-set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-g -O0 -std=c++11")
+set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -std=c++11")
+#set(CMAKE_CXX_FLAGS "-std=c++11")
 
 LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 

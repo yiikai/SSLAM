@@ -25,7 +25,6 @@ float getScaleFactor(int level)
     return scale;
 }
 
-const int EDGE_THRESHOLD = 19;
 std::vector<Mat> mvImagePyramidL(8);
 std::vector<Mat> mvImagePyramidR(8);
 void ComputePyramid(cv::Mat image, const int nlevels, std::vector<Mat>& mvImagePyramid)
@@ -52,25 +51,29 @@ void ComputePyramid(cv::Mat image, const int nlevels, std::vector<Mat>& mvImageP
                            BORDER_REFLECT_101);
         }
     }
+#if 0 /*show ORB prymaid img*/
     for(int i =0 ; i < 8 ; i++)
     {
         imshow("match feature",mvImagePyramid[i]);
         cv::waitKey(0);
     }
+#endif
 
 }
 
 
 int main(int argc, char* * argv)
 {
-    string path = "/home/yiikai/Develop/MySlam/resource/21";
-	DataSets sets(path);
-	sets.init();
-
+#if 0
     string img1path = "/home/yiikai/Develop/MySlam/resource/21/image_0/000000.png";
     string img2path = "/home/yiikai/Develop/MySlam/resource/21/image_0/000001.png";
     cv::Mat img1 = cv::imread(img1path);
     cv::Mat img2 = cv::imread(img2path);
+    cvtColor(img1,img1,COLOR_BGR2GRAY);
+    cvtColor(img2,img2,COLOR_BGR2GRAY);
+    cout<<img1.depth()<<", "<<img1.channels()<<endl;
+    cout<<img2.depth()<<", "<<img2.channels()<<endl;
+         
 
     //计算ORB的金字塔图层的每一层的size
     ComputePyramid(img1,8,mvImagePyramidL);
@@ -172,8 +175,8 @@ int main(int argc, char* * argv)
         for(int i = -steps; i <= steps; i++)
         {
             cv::Mat IR = mvImagePyramidR[levelL].rowRange(yL-w,yL+w+1).colRange(xR+i-w, xR+i+w+1);
-            IR.convertTo(IL,CV_32F);
-            IR = IR - IR.at<float>(w,w) * cv::Mat::ones(IR.rows,IL.cols,CV_32F);
+            IR.convertTo(IR,CV_32F);
+            IR = IR - IR.at<float>(w,w) * cv::Mat::ones(IR.rows,IR.cols,CV_32F);
             
             float dist = cv::norm(IL,IR,cv::NORM_L1);
             if(dist < bestDist)
@@ -193,12 +196,12 @@ int main(int argc, char* * argv)
         const float deltaR = (dist1 - dist2)/(2.0f*(dist1 + dist3 - 2.0f*dist2));
         if(deltaR < -1 || deltaR > 1)
             continue;
-
-        float bestUR = scalefactorL * static_cast<float>(bestiR + beststep + deltaR);
-        cout<<bestUR<<endl;
         
+        cout<<"delta R:"<<deltaR<<endl;
+        float bestUR = scalefactorL * static_cast<float>(bestiR + beststep + deltaR);
+         
     }
-
+#endif
 #if 0 //比较粗糙的特征匹配筛选
     //drawKeypoints(img1, keypoints, img1, cv::Scalar(0, 0, 255), cv::DrawMatchesFlags::DRAW_OVER_OUTIMG);
     double min_dist = 10000, max_dist = 0;
@@ -223,17 +226,17 @@ int main(int argc, char* * argv)
 	//drawMatches(img1, keypoints1, img2, keypoints2, filterMathces, matchMat);
     //imshow("match feature",matchMat);
     //cv::waitKey(0);
-#if 0
+#if 1
 	string path = "/home/yiikai/Develop/MySlam/resource/21";
 	DataSets sets(path);
 	sets.init();
 	SLAMMap::ptr lp_newmap = make_shared<SLAMMap>();
 	becken::ptr l_becken = make_shared<becken>(sets);
-    Viewer::ptr l_viewer = make_shared<Viewer>();
+    //Viewer::ptr l_viewer = make_shared<Viewer>();
 	frontEnd l_front(sets, lp_newmap);
 	l_front.addBecken(l_becken);
-    l_viewer->SetMap(lp_newmap);
-    l_front.setViewer(l_viewer);
+    //l_viewer->SetMap(lp_newmap);
+    //l_front.setViewer(l_viewer);
 	while(1)
 	{
         frame::ptr lf = sets.nextFrame();

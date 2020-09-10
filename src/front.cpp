@@ -281,6 +281,17 @@ namespace MySlam
 
     void frontEnd::detectedFeature()
     {
+#if 1
+        mOrbLeft = make_shared<orbExtractor>(m_currentFrame->m_leftImg,500,1.2,8);
+        mOrbRight = make_shared<orbExtractor>(m_currentFrame->m_rightImg,500,1.2,8);
+
+        mOrbLeft->detectAndCompute();
+        mOrbRight->detectAndCompute();
+        std::vector<cv::KeyPoint> keypoints;
+        keypoints = mOrbLeft->getKeyPoints(); 
+#endif
+
+#if 0
         cv::Mat mask(m_currentFrame->m_leftImg.size(), CV_8UC1, 255);
         for (auto &feat : m_currentFrame->m_leftKPs) {
             cv::rectangle(mask, feat->getPoint2f() - cv::Point2f(10, 10),
@@ -288,6 +299,7 @@ namespace MySlam
         }
         std::vector<cv::KeyPoint> keypoints;
         mp_detector->detect(m_currentFrame->m_leftImg, keypoints, mask);
+#endif
         std::vector<cv::Point2f> keypoints2f;
         cv::KeyPoint::convert(keypoints, keypoints2f);
         for(auto& k:keypoints2f)
@@ -304,10 +316,132 @@ namespace MySlam
             m_viewer->AddCurrentFrame(m_currentFrame);
             m_viewer->UpdateMap();
         }
+
     }
 
     unsigned int frontEnd::findFeatureInRight()
     {
+#if 1
+        /* 粗略的计算大致的匹配的特征点，用serach bar可以减小复杂度，不像粗暴匹配那样搜索匹配所有像素点*/
+        std::vector<cv::KeyPoint> vR = mOrbRight->getKeyPoints();
+        std::vector<cv::KeyPoint> vL = mOrbLeft->getKeyPoints();
+        int keyRsize = vR.size();
+        int keyLsize = vL.size();
+         
+        std::vector<std::vector<int>> vRowIndices(keyRsize,std::vector<int>());
+        for(auto& indice:vRowIndices)
+            indice.reserve(200);
+
+        for(int iR = 0; iR < keyRsize; iR++)
+        {
+            cv::KeyPoint& kp = vR[iR];
+            const float y = kp.pt.y;
+            const float x = kp.pt.x;
+            const float r = 2.0f * mOrbRight->getScaleFactor(kp.octave);
+            const float maxRange = ceil(y+r);
+            const float minRange = floor(y-r);
+            for(int i = minRange; i < maxRange; i++)
+            {
+                vRowIndices[i].push_back(iR);
+            }
+        }
+        //对左图的每一个特征点寻找一个匹配的右图的特征点
+        for(int iL = 0; iL < keyLsize; iL++)
+        {
+            cv::KeyPoint kpL = vL[iL];
+            const float y = kpL.pt.y;
+            const float x = kpL.pt.x;
+            int levelL = kpL.octave;
+            auto candicates = vRowIndices[y];
+            if(candicates.empty())
+                continue;
+            float mindist = 1000;
+            int bestiR = 0;
+            for(auto& iR:candicates)
+            {
+                cv::KeyPoint kpR = vR[iR];
+                int levelR = kpR.octave;
+                if(levelR < levelL -1 && levelR > levelL +1) //特征点金字塔级别太大的不考虑
+                    continue;
+                const cv::Mat dL = mOrbLeft->getDesc();
+                const cv::Mat dR = mOrbRight->getDesc();
+                /*对于关键点算子用hanming算法计算之间的距离*/
+                cv::BFMatcher matcher(cv::NORM_HAMMING);
+                std::vector<cv::DMatch> mathces;
+                matcher.match(dL, dR, mathces);
+                //从匹配的matches中选出好的那个匹配对
+                for(auto& match:mathces)
+                {
+                    if(match.distance < mindist)
+                    {
+                        mindist = match.distance;
+                        bestiR = iR;
+                    }
+                }
+            }
+            /*粗糙的得出右边的最佳匹配特征点位置后， 进行精细的计算这个位置*/
+            const int orbTH = 80;
+            if(mindist > 80)
+                continue;
+
+            //SAD 进一步优化匹配的特征点的精度
+            float scalefactorL =  mOrbLeft->getScaleFactor(levelL);
+            float scalefactorInvL = 1/mOrbLeft->getScaleFactor(levelL);
+            int xL = round(x*scalefactorInvL);
+            int yL = round(y*scalefactorInvL);
+            int xR = round(vR[bestiR].pt.x * scalefactorInvL);
+            int w = 5;
+            int steps = 5;
+            int bestDist = 10000;
+            int beststep = 0;
+            std::vector<float> vdist(2*steps + 1);
+            std::vector<cv::Mat> pyramidL = mOrbLeft->getPyramid();
+            std::vector<cv::Mat> pyramidR = mOrbRight->getPyramid();
+            cv::Mat IL = pyramidL[levelL].rowRange(yL-w, yL+w+1).colRange(xL-w, xL+w+1); //定义sad slide window
+            //归一化
+            IL.convertTo(IL,CV_32F);
+            IL = IL - IL.at<float>(w,w) * cv::Mat::ones(IL.rows,IL.cols,CV_32F);
+            const float iniu = xR + steps - w;
+            const float endu = xR + steps + w + 1;
+            if(iniu <  0 || endu > pyramidR[levelL].cols)
+                continue;
+
+            for(int i = -steps; i <= steps; i++)
+            {
+                cv::Mat IR = pyramidR[levelL].rowRange(yL-w,yL+w+1).colRange(xR+i-w, xR+i+w+1);
+                IR.convertTo(IR,CV_32F);
+                IR = IR - IR.at<float>(w,w) * cv::Mat::ones(IR.rows,IR.cols,CV_32F);
+
+                float dist = cv::norm(IL,IR,cv::NORM_L1);
+                if(dist < bestDist)
+                {
+                    bestDist = dist;
+                    beststep = i;
+                }
+                vdist[i + w] = dist;
+            }        
+
+            if(beststep == -steps || beststep == steps)  //根据sad原理，最佳值再所有距离组成的抛物线低端，不可能是再两个头的
+                continue; 
+            const float dist1 = vdist[steps + bestDist - 1];
+            const float dist2 = vdist[steps + bestDist];
+            const float dist3 = vdist[steps + bestDist + 1];
+
+            const float deltaR = (dist1 - dist2)/(2.0f*(dist1 + dist3 - 2.0f*dist2));
+            if(deltaR < -1 || deltaR > 1)
+                continue;
+
+            float bestUR = scalefactorL * static_cast<float>(bestiR + beststep + deltaR);
+            
+            cout<<"best uR:"<<bestUR<<endl;
+            //add feature for right frame
+            feature::ptr rfeat = make_shared<feature>(vR[bestUR].pt);
+            rfeat->m_frame = m_currentFrame;
+            rfeat->m_isOnLeftImg = false;	
+            m_currentFrame->m_rightKPs.push_back(rfeat);
+        }
+#endif
+#if 0
         unsigned int num_good_pts = 0;
         std::vector<cv::Point2f> rkps2f, lkps2f;
         for(auto& k:m_currentFrame->m_leftKPs)
@@ -353,6 +487,7 @@ namespace MySlam
         return num_good_pts;		
         //cout<<"frame leftKP: "<<m_currentFrame->m_leftKPs.size()<<endl;
         //cout<<"frame rightKP: "<<m_currentFrame->m_rightKPs.size()<<endl;
+#endif
     }
 }
 

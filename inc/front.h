@@ -11,7 +11,7 @@
 #include "slammap.h"
 #include "becken.h"
 #include "viewer.h"
-
+#include "orbExtractor.h"
 namespace MySlam
 {
 
@@ -59,6 +59,8 @@ namespace MySlam
 			int m_num_feature_tracking = {25};
 			becken::ptr m_becken = {nullptr};
             Viewer::ptr m_viewer = {nullptr};
+            orbExtractor::ptr mOrbLeft;
+            orbExtractor::ptr mOrbRight;
 	};
 }
 #endif
